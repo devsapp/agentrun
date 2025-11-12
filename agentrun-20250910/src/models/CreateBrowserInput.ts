@@ -1,0 +1,121 @@
+// This file is auto-generated, don't edit it
+import * as $dara from '@darabonba/typescript';
+import { NetworkConfiguration } from "./NetworkConfiguration";
+import { BrowserRecordingConfiguration } from "./BrowserRecordingConfiguration";
+
+
+export class CreateBrowserInput extends $dara.Model {
+  /**
+   * @remarks
+   * This parameter is required.
+   * 
+   * @example
+   * my-browser
+   */
+  browserName?: string;
+  /**
+   * @remarks
+   * CPU资源配置（单位：核）
+   * 
+   * This parameter is required.
+   * 
+   * @example
+   * 2.0
+   */
+  cpu?: number;
+  /**
+   * @example
+   * cred-1234567890abcdef
+   */
+  credentialId?: string;
+  /**
+   * @example
+   * Web automation browser for testing
+   */
+  description?: string;
+  /**
+   * @example
+   * acs:ram::1760720386195983:role/BrowserExecutionRole
+   */
+  executionRoleArn?: string;
+  /**
+   * @remarks
+   * 内存资源配置（单位：MB）
+   * 
+   * This parameter is required.
+   * 
+   * @example
+   * 2048
+   */
+  memory?: number;
+  /**
+   * @remarks
+   * This parameter is required.
+   */
+  networkConfiguration?: NetworkConfiguration;
+  /**
+   * **if can be null:**
+   * true
+   */
+  recording?: BrowserRecordingConfiguration;
+  /**
+   * @remarks
+   * 会话的空闲超时时间，单位为秒。实例没有会话请求后处于空闲状态，空闲态为闲置计费模式，超过此超时时间后会话自动过期，不可继续使用
+   * 
+   * @example
+   * 3600
+   */
+  sessionIdleTimeoutSeconds?: number;
+  /**
+   * @example
+   * production,browser
+   */
+  tags?: string[];
+  static names(): { [key: string]: string } {
+    return {
+      browserName: 'browserName',
+      cpu: 'cpu',
+      credentialId: 'credentialId',
+      description: 'description',
+      executionRoleArn: 'executionRoleArn',
+      memory: 'memory',
+      networkConfiguration: 'networkConfiguration',
+      recording: 'recording',
+      sessionIdleTimeoutSeconds: 'sessionIdleTimeoutSeconds',
+      tags: 'tags',
+    };
+  }
+
+  static types(): { [key: string]: any } {
+    return {
+      browserName: 'string',
+      cpu: 'number',
+      credentialId: 'string',
+      description: 'string',
+      executionRoleArn: 'string',
+      memory: 'number',
+      networkConfiguration: NetworkConfiguration,
+      recording: BrowserRecordingConfiguration,
+      sessionIdleTimeoutSeconds: 'number',
+      tags: { 'type': 'array', 'itemType': 'string' },
+    };
+  }
+
+  validate() {
+    if(this.networkConfiguration && typeof (this.networkConfiguration as any).validate === 'function') {
+      (this.networkConfiguration as any).validate();
+    }
+    if(this.recording && typeof (this.recording as any).validate === 'function') {
+      (this.recording as any).validate();
+    }
+    if(Array.isArray(this.tags)) {
+      $dara.Model.validateArray(this.tags);
+    }
+    super.validate();
+  }
+
+  constructor(map?: { [key: string]: any }) {
+    super(map);
+  }
+}
+
