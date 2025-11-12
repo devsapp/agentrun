@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentRuntimeDelete",
+  "description": "Schema for deleting AgentRun runtime",
+  "type": "object",
+  "properties": {
+    "region": {
+      "type": "string",
+      "description": "AliCloud region ID",
+      "enum": [
+        "cn-beijing",
+        "cn-hangzhou",
+        "cn-shanghai",
+        "cn-zhangjiakou",
+        "cn-shenzhen",
+        "cn-guangzhou",
+        "cn-hongkong",
+        "ap-southeast-1",
+        "eu-west-1"
+      ],
+      "default": "cn-hangzhou"
+    },
+    "agentRuntime": {
+      "type": "object",
+      "description": "AgentRun runtime configuration for deletion",
+      "properties": {
+        "agentRuntimeName": {
+          "type": "string",
+          "description": "The unique name of the agent runtime instance to delete"
+        }
+      },
+      "required": ["agentRuntimeName"]
+    }
+  },
+  "required": ["region", "agentRuntime"]
+}

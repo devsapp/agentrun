@@ -1,0 +1,453 @@
+# Serverless Devs 配置文件版本
+edition: 3.0.0
+
+# 应用名称
+name: my-agentrun-app
+
+# 阿里云密钥配置别名（需要提前配置：s config add）
+access: default
+
+# 全局变量定义
+vars:
+  region: cn-hangzhou
+  env: production
+  roleArn: acs:ram::123456789:role/AliyunFCDefaultRole
+
+# 资源配置
+resources:
+  # ==================== 基础示例：简单代码模式 ====================
+  code-with-config-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: python-runtime
+        description: "Python 代码运行时"
+        
+        # 对象模式：指定代码路径、语言和启动命令
+        code:
+          src: ./code              # 本地代码目录
+          language: python3.10     # 运行时语言
+          command:                 # 启动命令
+            - python
+            - app.py
+            - --port
+            - "9000"
+        
+        cpu: 2.0
+        memory: 4096
+        port: 9000
+        internetAccess: true
+        
+        environmentVariables:
+          PYTHONPATH: /code
+          PYTHON_ENV: production
+
+  # ==================== Node.js 示例 ====================
+  nodejs-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: nodejs-runtime
+        description: "Node.js 代码运行时"
+        
+        code:
+          src: ./nodejs-app
+          language: nodejs20       # Node.js 20
+          command:
+            - node
+            - index.js
+        
+        cpu: 1.0
+        memory: 2048
+        port: 8080
+        internetAccess: true
+        
+        environmentVariables:
+          NODE_ENV: production
+          PORT: "8080"
+
+  # ==================== 使用 ZIP 包 ====================
+  zip-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: zip-runtime
+        description: "使用 ZIP 包部署"
+        
+        code:
+          src: ./dist/app.zip      # ZIP 文件路径
+          language: python3.12
+          command:
+            - python
+            - main.py
+        
+        cpu: 1.0
+        memory: 2048
+        port: 9000
+
+  # ==================== 使用 OSS 存储的代码 ====================
+  oss-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: oss-runtime
+        description: "从 OSS 加载代码"
+        
+        code:
+          ossBucketName: my-code-bucket    # OSS bucket 名称
+          ossObjectName: agent/v1.0.0.zip  # OSS 对象路径
+          language: python3.10
+          command:
+            - python
+            - app.py
+        
+        cpu: 2.0
+        memory: 4096
+        port: 9000
+        
+        role: ${vars.roleArn}
+
+  # ==================== Java 示例 ====================
+  java-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: java-runtime
+        description: "Java 应用运行时"
+        
+        code:
+          src: ./target/app.jar
+          language: java11         # Java 11
+          command:
+            - java
+            - -jar
+            - app.jar
+            - --server.port=9000
+        
+        cpu: 2.0
+        memory: 4096
+        port: 9000
+        timeout: 300
+        
+        environmentVariables:
+          JAVA_OPTS: "-Xmx3072m -Xms1024m"
+          SPRING_PROFILES_ACTIVE: production
+
+  # ==================== Go 示例 ====================
+  go-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: go-runtime
+        description: "Go 应用运行时"
+        
+        code:
+          src: ./bin
+          language: custom         # Go 使用 custom runtime
+          command:
+            - ./bootstrap          # Go 编译后的二进制文件
+            - serve
+        
+        cpu: 1.0
+        memory: 1024
+        port: 9000
+        
+        environmentVariables:
+          GO_ENV: production
+
+  # ==================== Custom Runtime 示例 ====================
+  custom-runtime-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: custom-runtime
+        description: "自定义运行时"
+        
+        code:
+          src: ./custom-app
+          language: custom         # 自定义运行时
+          command:
+            - /code/bootstrap      # 自定义启动脚本
+            - start
+            - --config
+            - /code/config.yaml
+        
+        cpu: 2.0
+        memory: 4096
+        port: 9000
+        
+        environmentVariables:
+          CUSTOM_CONFIG: /code/config.yaml
+
+  # ==================== 完整配置示例 ====================
+  full-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: full-runtime
+        description: "完整配置示例 - 代码模式"
+        
+        # ===== 代码配置 =====
+        code:
+          src: ./code                # 代码路径
+          language: python3.10       # 运行时语言
+          command:                   # 启动命令
+            - python
+            - -u                     # 无缓冲输出
+            - main.py
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "9000"
+        
+        # ===== 资源配置 =====
+        cpu: 2.0
+        memory: 4096
+        diskSize: 512
+        timeout: 600
+        port: 9000
+        
+        # ===== 并发配置 =====
+        instanceConcurrency: 50
+        
+        # ===== 网络配置 =====
+        internetAccess: true
+        vpcConfig:
+          vpcId: vpc-xxx123456
+          vSwitchIds:
+            - vsw-xxx111111
+            - vsw-xxx222222
+          securityGroupId: sg-xxx123456
+        
+        # ===== 环境变量 =====
+        environmentVariables:
+          APP_ENV: production
+          LOG_LEVEL: info
+          DATABASE_URL: ${env.DATABASE_URL}
+          REDIS_URL: ${env.REDIS_URL}
+        
+        # ===== 执行角色 =====
+        role: ${vars.roleArn}
+        
+        # ===== 日志配置 =====
+        logConfig:
+          project: my-sls-project
+          logstore: agent-logs
+        
+        # ===== 端点配置 =====
+        endpoints:
+          - name: production
+            version: 1
+            description: "生产环境"
+          
+          - name: canary
+            version: 2
+            description: "金丝雀发布"
+            weight: 0.2
+
+  # ==================== AI Agent 完整示例 ====================
+  ai-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: ai-assistant
+        description: "AI 智能助手"
+        
+        # ===== Python AI Agent 代码配置 =====
+        code:
+          src: ./ai-agent
+          language: python3.10
+          command:
+            - python
+            - -u
+            - agent_main.py
+            - --config
+            - config/production.yaml
+        
+        # ===== 资源配置 =====
+        cpu: 2.0
+        memory: 8192
+        diskSize: 512
+        timeout: 900  # 15 分钟
+        port: 8000
+        
+        instanceConcurrency: 20
+        
+        # ===== 网络配置 =====
+        internetAccess: true
+        
+        # ===== 执行角色 =====
+        role: ${vars.roleArn}
+        
+        # ===== 日志配置 =====
+        logConfig:
+          project: ai-agent-logs
+          logstore: runtime
+        
+        # ===== AI Agent 环境变量 =====
+        environmentVariables:
+          # Python 配置
+          PYTHONUNBUFFERED: "1"
+          PYTHONPATH: /code
+          
+          # LLM 配置
+          LLM_PROVIDER: qwen
+          LLM_MODEL: qwen-max
+          LLM_API_KEY: ${env.DASHSCOPE_API_KEY}
+          LLM_ENDPOINT: https://dashscope.aliyuncs.com/compatible-mode/v1
+          
+          # Agent 配置
+          AGENT_NAME: ai-assistant
+          MAX_ITERATIONS: "10"
+          
+          # 工具配置
+          ENABLE_BROWSER: "true"
+          ENABLE_CODE_INTERPRETER: "true"
+          ENABLE_MEMORY: "true"
+          
+          # 记忆配置
+          MEMORY_NAME: ai-assistant-memory
+          
+          # 日志配置
+          LOG_LEVEL: info
+        
+        # ===== 端点配置 =====
+        endpoints:
+          - name: prod
+            version: 1
+            description: "生产环境"
+          
+          - name: gray
+            version: 2
+            description: "灰度 5%"
+            weight: 0.05
+
+  # ==================== 容器模式对比 ====================
+  container-agent:
+    component: agentrun
+    props:
+      region: ${vars.region}
+      
+      agent:
+        name: container-runtime
+        description: "容器模式示例"
+        
+        # ===== 容器配置（与 code 二选一）=====
+        customContainerConfig:
+          image: registry.cn-hangzhou.aliyuncs.com/my-namespace/agent:latest
+          command:
+            - python3
+            - app.py
+          port: 8080
+        
+        cpu: 2.0
+        memory: 4096
+        internetAccess: true
+
+# ==================== 代码配置说明 ====================
+#
+# code 支持两种格式：
+#
+# 1️⃣ 对象格式 - 本地代码
+#    code:
+#      src: ./code                   # 代码路径（目录或 ZIP）
+#      language: python3.10          # 运行时语言
+#      command:                      # 启动命令（数组）
+#        - python
+#        - app.py
+#
+# 2️⃣ 对象格式 - OSS 代码
+#    code:
+#      ossBucketName: my-bucket      # OSS Bucket 名称
+#      ossObjectName: code/app.zip   # OSS 对象路径
+#      language: python3.10
+#      command:
+#        - python
+#        - app.py
+#
+# ==================== 支持的运行时语言 ====================
+#
+# Python:
+#   - python3.10
+#   - python3.12
+#
+# Node.js:
+#   - nodejs18
+#   - nodejs20
+#
+# Java:
+#   - java8
+#   - java11
+#
+# Go:
+#   - custom (编译后的二进制)
+#
+# 其他:
+#   - custom (自定义运行时)
+#
+# ==================== command 说明 ====================
+#
+# command 是一个字符串数组，定义容器启动命令：
+#
+# Python 示例:
+#   command: [python, app.py]
+#   command: [python, -u, main.py, --port, "9000"]
+#
+# Node.js 示例:
+#   command: [node, index.js]
+#   command: [npm, start]
+#
+# Java 示例:
+#   command: [java, -jar, app.jar]
+#
+# Go 示例:
+#   command: [./bootstrap, serve]
+#
+# 自定义脚本:
+#   command: [/code/start.sh, --config, /code/config.yaml]
+#
+# ==================== 最佳实践 ====================
+#
+# ✅ 明确指定 language，避免使用默认值
+# ✅ command 使用完整路径或明确的文件名
+# ✅ Python 使用 -u 参数避免输出缓冲
+# ✅ 将配置文件路径作为命令行参数传递
+# ✅ 使用环境变量管理敏感信息
+#
+# ==================== 注意事项 ====================
+#
+# ⚠️  language 字段：
+#     - 必须与实际代码语言匹配
+#     - 影响运行时环境和依赖安装
+#
+# ⚠️  command 字段：
+#     - 数组的第一个元素是可执行文件
+#     - 后续元素是参数
+#     - 路径相对于 /code 目录
+#
+# ⚠️  代码路径：
+#     - src 支持相对路径和绝对路径
+#     - 相对路径基于 s.yaml 所在目录
+#     - ZIP 文件会自动解压到 /code
+#
+# ⚠️  OSS 配置：
+#     - 需要确保 role 有 OSS 读取权限
+#     - ossObjectName 是完整的对象路径

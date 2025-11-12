@@ -1,0 +1,12 @@
+edition: 3.0.0
+name: agentrun-app
+access: 'your-access-alias'
+
+resources:
+  agentRuntime_example:
+    component: ${path("../")}
+    props:
+      region: cn-hangzhou
+      agentRuntime:
+        agentRuntimeName: my-runtime
+

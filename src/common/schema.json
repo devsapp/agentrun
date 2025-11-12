@@ -1,0 +1,239 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentRun",
+  "description": "Schema for AgentRun configuration",
+  "type": "object",
+  "properties": {
+    "region": {
+      "type": "string",
+      "description": "AliCloud region ID",
+      "enum": [
+        "cn-beijing",
+        "cn-hangzhou",
+        "cn-shanghai",
+        "cn-zhangjiakou",
+        "cn-shenzhen",
+        "cn-guangzhou",
+        "cn-hongkong",
+        "ap-southeast-1",
+        "eu-west-1"
+      ],
+      "default": "cn-hangzhou"
+    },
+    "agent": {
+      "type": "object",
+      "description": "Agent runtime configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The unique name of the agent runtime instance"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the agent runtime"
+        },
+        "code": {
+          "type": "object",
+          "description": "Code configuration (must be an object)",
+          "properties": {
+            "language": {
+              "type": "string",
+              "description": "Programming language"
+            },
+            "command": {
+              "type": "array",
+              "description": "Command to run the code",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "src": {
+              "type": "string",
+              "description": "Local path to code directory or zip file"
+            },
+            "ossBucketName": {
+              "type": "string",
+              "description": "OSS bucket name"
+            },
+            "ossObjectName": {
+              "type": "string",
+              "description": "OSS object name"
+            }
+          },
+          "required": ["language", "command"],
+          "oneOf": [
+            {
+              "required": ["src"],
+              "description": "Use local code path"
+            },
+            {
+              "required": ["ossBucketName", "ossObjectName"],
+              "description": "Use OSS code package"
+            }
+          ]
+        },
+        "customContainerConfig": {
+          "type": "object",
+          "description": "Container configuration",
+          "properties": {
+            "image": {
+              "type": "string",
+              "description": "Container image URL"
+            },
+            "command": {
+              "type": "array",
+              "description": "Command to run in container",
+              "items": {
+                "type": "string"
+              }
+            },
+            "entrypoint": {
+              "type": "array",
+              "description": "Container entrypoint",
+              "items": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "type": "number",
+              "description": "Container port"
+            }
+          },
+          "required": ["image"]
+        },
+        "cpu": {
+          "type": "number",
+          "description": "CPU resources in cores",
+          "default": 1.0
+        },
+        "memory": {
+          "type": "number",
+          "description": "Memory resources in MB",
+          "default": 2048
+        },
+        "diskSize": {
+          "type": "number",
+          "description": "Disk size in MB",
+          "default": 512
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds",
+          "default": 600
+        },
+        "port": {
+          "type": "number",
+          "description": "Port number",
+          "default": 8000
+        },
+        "instanceConcurrency": {
+          "type": "number",
+          "description": "Maximum concurrent sessions per instance",
+          "default": 10
+        },
+        "vpcConfig": {
+          "type": "object",
+          "description": "VPC configuration",
+          "properties": {
+            "vpcId": {
+              "type": "string",
+              "description": "VPC ID"
+            },
+            "vSwitchIds": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Single VSwitch ID"
+                },
+                {
+                  "type": "array",
+                  "description": "Multiple VSwitch IDs",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "securityGroupId": {
+              "type": "string",
+              "description": "Security group ID"
+            }
+          },
+          "required": ["vpcId", "vSwitchIds", "securityGroupId"]
+        },
+        "internetAccess": {
+          "type": "boolean",
+          "description": "Allow internet access",
+          "default": true
+        },
+        "environmentVariables": {
+          "type": "object",
+          "description": "Environment variables",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "role": {
+          "type": "string",
+          "description": "RAM role ARN for execution"
+        },
+        "logConfig": {
+          "type": "object",
+          "description": "Log configuration",
+          "properties": {
+            "project": {
+              "type": "string",
+              "description": "SLS project name"
+            },
+            "logstore": {
+              "type": "string",
+              "description": "SLS logstore name"
+            }
+          },
+          "required": ["project", "logstore"]
+        },
+        "endpoints": {
+          "type": "array",
+          "description": "Endpoint configurations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Endpoint name"
+              },
+              "version": {
+                "type": "string",
+                "description": "Target version number"
+              },
+              "description": {
+                "type": "string",
+                "description": "Endpoint description"
+              },
+              "weight": {
+                "type": "number",
+                "description": "Gray traffic weight (0.0-1.0)",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": ["name"]
+          }
+        }
+      },
+      "required": ["name"],
+      "oneOf": [
+        {
+          "required": ["code"],
+          "description": "Code-based agent runtime"
+        },
+        {
+          "required": ["customContainerConfig"],
+          "description": "Container-based agent runtime"
+        }
+      ]
+    }
+  },
+  "required": ["region", "agent"]
+}

@@ -1,0 +1,61 @@
+{
+  "name": "AgentRunComponent",
+  "version": "dev.0.1",
+  "description": "This is agentrun component for Serverless Devs Tool",
+  "autoInstall": false,
+  "homepage": "https://www.serverless-devs.com",
+  "author": "Serverless-Devs",
+  "contributors": [],
+  "license": "MIT",
+  "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "Serverless",
+    "Framework",
+    "Serverless-Devs",
+    "Serverless-Tool",
+    "AgentRun",
+    "AI Agent"
+  ],
+  "scripts": {
+    "start": "npm run watch",
+    "watch": "tsc -w",
+    "format": "prettier --write src/",
+    "prebuild": "rimraf dist && npm run format && rimraf node_modules && npm i",
+    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --external:@darabonba/typescript --external:@alicloud/openapi-core --minify --platform=node --format=cjs --target=node10.4 --outfile=dist/index.js",
+    "postbuild": "cp src/common/schema.json dist/schema.json && cp src/common/schema-delete.json dist/schema-delete.json"
+  },
+  "dependencies": {
+    "@alicloud/agentrun20250910": "^0.0.1",
+    "@alicloud/openapi-client": "^0.4.9",
+    "@alicloud/openapi-core": "^1.0.0",
+    "@alicloud/tea-console": "^1.0.0",
+    "@alicloud/tea-typescript": "^1.8.0",
+    "@alicloud/tea-util": "^1.4.8",
+    "@alicloud/fc2": "^2.6.6",
+    "@alicloud/fc20230330": "4.6.3",
+    "@darabonba/typescript": "^1.0.0",
+    "ajv": "^8.13.0",
+    "@serverless-devs/component-interface": "^0.0.4",
+    "@serverless-devs/logger": "^0.0.5",
+    "@serverless-devs/load-component": "*",
+    "@serverless-devs/utils": "^0.0.15",
+    "chalk": "^4.1.0",
+    "inquirer": "^8.2.6",
+    "@serverless-devs/zip": "^0.0.3-beta.8",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "esbuild": "^0.21.5",
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
+

@@ -1,0 +1,79 @@
+edition: 3.0.0
+name: agentrun-app
+access: 'default'
+
+resources:
+  agentRuntime_example:
+    component: ${path("../")}
+    props:
+      region: cn-hangzhou
+      
+      # ============= 新规范：agent 配置 =============
+      agent:
+        # 基本信息
+        name: my-runtime-1109-2
+        description: "My Agent Runtime"
+        
+        # 代码配置（直接指定路径，支持目录或 zip 文件,或使用 OSS 代码包）
+        code:
+          src: ./
+          # ossBucketName: funagent-agent-quickstart-langchain-demo-code
+          # ossObjectName: agentrun-quickstart-code.zip
+          language: python3.12
+          command:
+            - python3
+            - main.py
+        
+        # 容器配置（使用容器模式时配置此项）
+        # customContainerConfig:
+        #   image: registry.cn-hangzhou.aliyuncs.com/my-app:latest
+        #   command:
+        #     - python3
+        #     - app.py
+        #   port: 9000
+        
+        # 资源配置
+        cpu: 1.0
+        memory: 2048
+        diskSize: 512     # 可选，默认 512 MB
+        timeout: 600      # 可选，默认 600 秒
+
+        
+        # 端口和并发
+        port: 9000
+        instanceConcurrency: 10
+        
+        # 网络配置 - 仅公网访问
+        internetAccess: true
+        
+        # VPC 配置（需要 VPC 内网访问时配置）
+        # vpcConfig:
+        #   vpcId: vpc-xxx
+        #   vSwitchIds: [vsw-xxx]  # 支持单个或多个
+        #   securityGroupId: sg-xxx
+        # internetAccess: true  # 同时配置 vpcConfig 和 internetAccess 表示内外网都可访问
+        
+        # 环境变量
+        environmentVariables:
+          ENV: production
+          DEBUG: "false"
+        
+        # 执行角色
+        # role: acs:ram::1760720386195983:role/AliyunFCDefaultRole
+        
+        # 日志配置
+        # logConfig:
+        #   project: ws-testhz
+        #   logstore: acs-ecs-system
+        
+        # 端点配置
+        endpoints:
+          - name: prod
+            version: LATEST
+            description: "生产环境端点"
+          
+          # 灰度发布示例
+          # - name: gray
+          #   version: 2
+          #   description: "灰度环境端点"
+          #   weight: 0.2  # 20% 流量到版本 2
