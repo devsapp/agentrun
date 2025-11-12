@@ -3,7 +3,7 @@ Type: Component
 Name: agentrun
 Provider:
   - 阿里云
-Version: 0.0.2
+Version: 0.0.3
 Description: 部署阿里云 AgentRun 智能体运行时
 HomePage: https://github.com/devsapp/agentrun
 Tags:

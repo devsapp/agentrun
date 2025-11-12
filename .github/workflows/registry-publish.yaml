@@ -25,4 +25,4 @@ jobs:
           s registry login --token ${{ secrets.alibaba_registry_v3_publish_token }}
       - name: release prod
         run: |
-          npm i && cp -r ./agent-20250910 ./node_modules && npm run build && s registry publish
+          npm i && cp -r ./agentrun-20250910 ./node_modules && npm run build && s registry publish
