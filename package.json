@@ -1,6 +1,6 @@
 {
   "name": "AgentRunComponent",
-  "version": "dev.0.1",
+  "version": "0.1.0",
   "description": "This is agentrun component for Serverless Devs Tool",
   "autoInstall": false,
   "homepage": "https://www.serverless-devs.com",
