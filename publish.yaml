@@ -17,10 +17,11 @@ Service:
     Authorities:
       - AliyunAgentRunFullAccess
 Commands:
-  deploy: 创建 AgentRun 运行时实例
-  remove: 删除 AgentRun 运行时实例
-  info: 查看 AgentRun 运行时实例信息
-Organization: Serverless应用引擎（SAE）
+  deploy: 部署 Agent
+  remove: 删除指定 Agent
+  build: 构建 Agent
+  info: 查看 Agent 详情
+Organization: AgentRun
 Effective: Public
 Parameters:
   type: object
