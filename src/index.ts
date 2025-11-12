@@ -1,14 +1,14 @@
 import { IInputs } from "./interface/index";
 import { AgentRun } from "./impl/agentrun";
 import GLogger from "./common/logger";
-import loadComponent from '@serverless-devs/load-component';
+import loadComponent from "@serverless-devs/load-component";
 
-const FC3_COMPONENT_NAME = 'fc3';
+const FC3_COMPONENT_NAME = "fc3";
 
 export default class ComponentAgentRun {
   protected commands: any;
   private logger: any;
-  
+
   constructor({ logger }: any) {
     this.logger = logger || console;
     this.commands = {
@@ -122,7 +122,7 @@ export default class ComponentAgentRun {
     const { region, agent } = props;
 
     if (!agent) {
-      throw new Error('agent configuration is required');
+      throw new Error("agent configuration is required");
     }
 
     const {
@@ -158,9 +158,9 @@ export default class ComponentAgentRun {
     // 判断是代码模式还是容器模式
     if (code) {
       // 代码模式
-      fc3Props.runtime = code.language || 'custom';
-      fc3Props.handler = 'index.handler';
-      
+      fc3Props.runtime = code.language || "custom";
+      fc3Props.handler = "index.handler";
+
       // 设置代码位置
       if (code.src) {
         // 本地路径（目录或 zip 文件）
@@ -172,7 +172,9 @@ export default class ComponentAgentRun {
           ossObjectName: code.ossObjectName,
         };
       } else {
-        throw new Error('code.src or (code.ossBucketName + code.ossObjectName) must be provided');
+        throw new Error(
+          "code.src or (code.ossBucketName + code.ossObjectName) must be provided",
+        );
       }
 
       // 命令配置
@@ -188,8 +190,8 @@ export default class ComponentAgentRun {
       }
     } else if (customContainerConfig) {
       // 容器模式
-      fc3Props.runtime = 'custom-container';
-      fc3Props.handler = 'not-used';
+      fc3Props.runtime = "custom-container";
+      fc3Props.handler = "not-used";
       fc3Props.customContainerConfig = {
         image: customContainerConfig.image,
         command: customContainerConfig.command || [],
@@ -197,15 +199,15 @@ export default class ComponentAgentRun {
         port: customContainerConfig.port || port,
       };
     } else {
-      throw new Error('Either code or customContainerConfig must be provided');
+      throw new Error("Either code or customContainerConfig must be provided");
     }
 
     // VPC 配置
     if (vpcConfig) {
       fc3Props.vpcConfig = {
         vpcId: vpcConfig.vpcId,
-        vSwitchIds: Array.isArray(vpcConfig.vSwitchIds) 
-          ? vpcConfig.vSwitchIds 
+        vSwitchIds: Array.isArray(vpcConfig.vSwitchIds)
+          ? vpcConfig.vSwitchIds
           : [vpcConfig.vSwitchIds],
         securityGroupId: vpcConfig.securityGroupId,
       };
@@ -247,14 +249,18 @@ export default class ComponentAgentRun {
       path: inputs.path,
     };
 
-    GLogger.getLogger().debug(`FC3 inputs: ${JSON.stringify(fc3Inputs, null, 2)}`);
+    GLogger.getLogger().debug(
+      `FC3 inputs: ${JSON.stringify(fc3Inputs, null, 2)}`,
+    );
 
     // 加载并调用 FC3 组件
-    const fcComponent = await loadComponent(FC3_COMPONENT_NAME, { logger: this.logger });
+    const fcComponent = await loadComponent(FC3_COMPONENT_NAME, {
+      logger: this.logger,
+    });
     GLogger.getLogger().info(`Building agent: ${name}`);
     const buildResult = await fcComponent.build(fc3Inputs);
 
-    GLogger.getLogger().info('✅ Build completed successfully');
+    GLogger.getLogger().info("✅ Build completed successfully");
     return buildResult;
   }
 

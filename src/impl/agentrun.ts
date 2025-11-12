@@ -23,7 +23,7 @@ import Client, {
   ListAgentRuntimesRequest,
   GetAgentRuntimeRequest,
   ListAgentRuntimeEndpointsRequest,
-} from "@alicloud/agentrun-20250910";
+} from "./../../agentrun-20250910";
 import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";
@@ -31,11 +31,11 @@ import { promptForConfirmOrDetails } from "../utils/inquire";
 import { sleep } from "@alicloud/tea-typescript";
 
 // 新增导入
-import FC2 from '@alicloud/fc2';
-import OSS from 'ali-oss';
-import axios from 'axios';
-import fs from 'fs';
-import zip from '@serverless-devs/zip';
+import FC2 from "@alicloud/fc2";
+import OSS from "ali-oss";
+import axios from "axios";
+import fs from "fs";
+import zip from "@serverless-devs/zip";
 
 // 常量定义
 const FC_CLIENT_READ_TIMEOUT = 60000;
@@ -44,9 +44,9 @@ const FC_CLIENT_READ_TIMEOUT = 60000;
  * 创建 FC2 客户端（用于获取临时 OSS Token）
  */
 const createFC2Client = (
-  region: string, 
-  credentials: any, 
-  customEndpoint?: string
+  region: string,
+  credentials: any,
+  customEndpoint?: string,
 ): FC2 => {
   let endpoint = customEndpoint;
   if (!endpoint) {
@@ -72,9 +72,9 @@ function getFileSize(filePath: string): void {
   const stats = fs.statSync(filePath);
   const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
   logger.info(`Code package size: ${sizeInMB} MB`);
-  
+
   if (stats.size > 50 * 1024 * 1024) {
-    logger.warn('Code package is larger than 50MB, upload may take some time');
+    logger.warn("Code package is larger than 50MB, upload may take some time");
   }
 }
 
@@ -88,7 +88,10 @@ export class AgentRun {
   assumeYes: boolean = false;
   private fc2Client?: FC2;
 
-  constructor(readonly inputs: IInputs, action: string) {
+  constructor(
+    readonly inputs: IInputs,
+    action: string,
+  ) {
     const opts = parseArgv(inputs.args, {
       alias: { help: "h", "assume-yes": "y" },
       boolean: ["help", "y"],
@@ -106,12 +109,12 @@ export class AgentRun {
     } else {
       this.baseDir = process.cwd();
     }
-    
+
     const agentConfig = this.inputs.props.agent;
     if (!agentConfig) {
-      throw new Error('agent configuration is required');
+      throw new Error("agent configuration is required");
     }
-    
+
     this.agentRuntimeConfig = this.normalizeAgentConfig(agentConfig);
     this.assumeYes = this.opts.y;
 
@@ -126,8 +129,8 @@ export class AgentRun {
    */
   private normalizeAgentConfig(config: any): AgentRuntimeConfig {
     const logger = GLogger.getLogger();
-    logger.debug('Converting new YAML format to internal format');
-    
+    logger.debug("Converting new YAML format to internal format");
+
     const normalized: any = {
       agentRuntimeName: config.name,
       description: config.description,
@@ -140,22 +143,26 @@ export class AgentRun {
     };
 
     if (config.code) {
-      if (typeof config.code !== 'object') {
-        throw new Error('code must be an object with src or ossBucketName/ossObjectName');
+      if (typeof config.code !== "object") {
+        throw new Error(
+          "code must be an object with src or ossBucketName/ossObjectName",
+        );
       }
 
       if (!config.code.language) {
-        throw new Error('code.language is required');
+        throw new Error("code.language is required");
       }
 
       const hasSrc = config.code.src;
       const hasOss = config.code.ossBucketName && config.code.ossObjectName;
-      
+
       if (!hasSrc && !hasOss) {
-        throw new Error('code.src or (code.ossBucketName + code.ossObjectName) must be provided');
+        throw new Error(
+          "code.src or (code.ossBucketName + code.ossObjectName) must be provided",
+        );
       }
 
-      normalized.artifactType = 'Code';
+      normalized.artifactType = "Code";
       normalized.codeConfiguration = {
         language: config.code.language,
         command: config.code.command || [],
@@ -168,41 +175,44 @@ export class AgentRun {
         normalized.codeConfiguration.ossObjectName = config.code.ossObjectName;
       }
     } else if (config.customContainerConfig) {
-      normalized.artifactType = 'Container';
-      
+      normalized.artifactType = "Container";
+
       let command = config.customContainerConfig.command;
       if (command && !Array.isArray(command)) {
         command = [command];
       }
-      
+
       normalized.containerConfiguration = {
         image: config.customContainerConfig.image,
         command: command || [],
       };
     } else {
-      throw new Error('Either code or customContainerConfig must be provided');
+      throw new Error("Either code or customContainerConfig must be provided");
     }
 
     if (config.vpcConfig || config.internetAccess !== undefined) {
       normalized.networkConfiguration = {};
-      
+
       if (config.vpcConfig) {
         normalized.networkConfiguration.vpcId = config.vpcConfig.vpcId;
-        normalized.networkConfiguration.securityGroupId = config.vpcConfig.securityGroupId;
-        
+        normalized.networkConfiguration.securityGroupId =
+          config.vpcConfig.securityGroupId;
+
         if (config.vpcConfig.vSwitchIds) {
-          normalized.networkConfiguration.vswitchId = Array.isArray(config.vpcConfig.vSwitchIds)
+          normalized.networkConfiguration.vswitchId = Array.isArray(
+            config.vpcConfig.vSwitchIds,
+          )
             ? config.vpcConfig.vSwitchIds[0]
             : config.vpcConfig.vSwitchIds;
         }
-        
+
         if (config.internetAccess) {
-          normalized.networkConfiguration.networkMode = 'PUBLIC_AND_PRIVATE';
+          normalized.networkConfiguration.networkMode = "PUBLIC_AND_PRIVATE";
         } else {
-          normalized.networkConfiguration.networkMode = 'PRIVATE';
+          normalized.networkConfiguration.networkMode = "PRIVATE";
         }
       } else if (config.internetAccess) {
-        normalized.networkConfiguration.networkMode = 'PUBLIC';
+        normalized.networkConfiguration.networkMode = "PUBLIC";
       }
     }
 
@@ -220,14 +230,14 @@ export class AgentRun {
           description: ep.description,
           targetVersion: ep.version,
         };
-        
+
         if (ep.weight !== undefined && ep.weight > 0 && ep.weight < 1) {
           normalizedEp.grayTrafficWeight = {
-            version: String(ep.version || 'LATEST'),
+            version: String(ep.version || "LATEST"),
             weight: ep.weight,
           };
         }
-        
+
         return normalizedEp;
       });
     }
@@ -287,37 +297,37 @@ export class AgentRun {
     const logger = GLogger.getLogger();
     const client = await this.initFC2Client();
 
-    logger.debug('Getting temporary OSS bucket token...');
+    logger.debug("Getting temporary OSS bucket token...");
     const {
       data: { credentials, ossBucket, objectName },
     } = await (client as any).getTempBucketToken();
 
-    let ossEndpoint = 'https://oss-accelerate.aliyuncs.com';
-    
+    let ossEndpoint = "https://oss-accelerate.aliyuncs.com";
+
     if (process.env.FC_REGION === this.region) {
       ossEndpoint = `oss-${this.region}-internal.aliyuncs.com`;
     }
-    
+
     if (process.env.AGENTRUN_CUSTOM_ENDPOINT) {
       ossEndpoint = `oss-${this.region}.aliyuncs.com`;
     }
-    
-    if (this.region === 'cn-shanghai-finance-1') {
+
+    if (this.region === "cn-shanghai-finance-1") {
       if (process.env.FC_REGION === this.region) {
         ossEndpoint = `oss-${this.region}-pub-internal.aliyuncs.com`;
       } else {
         ossEndpoint = `oss-${this.region}-pub.aliyuncs.com`;
       }
     }
-    
-    if (this.region === 'cn-heyuan-acdr-1') {
+
+    if (this.region === "cn-heyuan-acdr-1") {
       ossEndpoint = `oss-${this.region}-internal.aliyuncs.com`;
     }
-    
+
     if (process.env.FC_CODE_TEMP_OSS_ENDPOINT) {
       ossEndpoint = process.env.FC_CODE_TEMP_OSS_ENDPOINT;
     }
-    
+
     logger.debug(`Uploading code to ${ossEndpoint}`);
 
     const ossClient = new OSS({
@@ -326,9 +336,9 @@ export class AgentRun {
       accessKeySecret: credentials.AccessKeySecret,
       stsToken: credentials.SecurityToken,
       bucket: ossBucket,
-      timeout: '600000',
+      timeout: "600000",
       refreshSTSToken: async () => {
-        const refreshToken = await axios.get('https://127.0.0.1/sts');
+        const refreshToken = await axios.get("https://127.0.0.1/sts");
         return {
           accessKeyId: refreshToken.data.credentials.AccessKeyId,
           accessKeySecret: refreshToken.data.credentials.AccessKeySecret,
@@ -340,10 +350,10 @@ export class AgentRun {
     const credential = await this.inputs.getCredential();
     const accountId = credential.AccountID;
     const ossObjectName = `${accountId}/${objectName}`;
-    
-    logger.info('Uploading code to temporary OSS...');
+
+    logger.info("Uploading code to temporary OSS...");
     await (ossClient as any).put(ossObjectName, path.normalize(zipFile));
-    logger.info(chalk.green('Code uploaded successfully'));
+    logger.info(chalk.green("Code uploaded successfully"));
 
     const config = { ossBucketName: ossBucket, ossObjectName };
     logger.debug(`tempCodeBucketToken response: ${JSON.stringify(config)}`);
@@ -354,17 +364,19 @@ export class AgentRun {
    * 判断是否需要压缩代码（与 FC3 相同逻辑）
    */
   private assertNeedZip(codeUri: string): boolean {
-    if (codeUri.endsWith('.jar')) {
+    if (codeUri.endsWith(".jar")) {
       const command = this.agentRuntimeConfig.codeConfiguration?.command || [];
-      const commandStr = Array.isArray(command) ? command.join(' ') : String(command);
-      
-      if (commandStr.includes('java -jar')) {
+      const commandStr = Array.isArray(command)
+        ? command.join(" ")
+        : String(command);
+
+      if (commandStr.includes("java -jar")) {
         return true;
       }
       return false;
     }
 
-    return !codeUri.endsWith('.zip');
+    return !codeUri.endsWith(".zip");
   }
 
   /**
@@ -373,7 +385,7 @@ export class AgentRun {
   private async processCodeUpload(): Promise<boolean> {
     const logger = GLogger.getLogger();
     const codeConfig = this.agentRuntimeConfig.codeConfiguration;
-    
+
     if (!codeConfig) {
       return false;
     }
@@ -381,48 +393,50 @@ export class AgentRun {
     const codeUri = codeConfig.zipFile;
     if (!codeUri) {
       if (codeConfig.ossBucketName && codeConfig.ossObjectName) {
-        logger.debug('Code already has OSS configuration, skipping upload');
+        logger.debug("Code already has OSS configuration, skipping upload");
         return true;
       }
-      throw new Error('Code configuration is empty');
+      throw new Error("Code configuration is empty");
     }
 
     let zipPath: string = path.isAbsolute(codeUri)
       ? codeUri
       : path.join(this.baseDir, codeUri);
-    
+
     logger.debug(`Code path absolute path: ${zipPath}`);
 
     const needZip = this.assertNeedZip(codeUri);
     logger.debug(`Need zip file: ${needZip}`);
 
-    let generateZipFilePath = '';
+    let generateZipFilePath = "";
     if (needZip) {
       const zipConfig = {
         codeUri: zipPath,
         outputFileName: `${this.region}_${this.agentRuntimeConfig.agentRuntimeName}_${Date.now()}`,
-        outputFilePath: path.join(getRootHome(), '.s', 'agentrun', 'zip'),
-        ignoreFiles: ['.arignore', '.fcignore'],
+        outputFilePath: path.join(getRootHome(), ".s", "agentrun", "zip"),
+        ignoreFiles: [".arignore", ".fcignore"],
       };
-      
-      logger.info('Compressing code...');
+
+      logger.info("Compressing code...");
       const start = new Date();
       generateZipFilePath = (await zip(zipConfig)).outputFile;
       const end = new Date();
       const milliseconds = end.getTime() - start.getTime();
       logger.debug(`Compression time: ${milliseconds / 1000}s`);
       zipPath = generateZipFilePath;
-      logger.info(chalk.green('Code compressed successfully'));
+      logger.info(chalk.green("Code compressed successfully"));
     }
 
     getFileSize(zipPath);
 
     try {
       const ossConfig = await this.uploadCodeToTmpOss(zipPath);
-      logger.debug('ossConfig: ', ossConfig);
+      logger.debug("ossConfig: ", ossConfig);
 
-      this.agentRuntimeConfig.codeConfiguration.ossBucketName = ossConfig.ossBucketName;
-      this.agentRuntimeConfig.codeConfiguration.ossObjectName = ossConfig.ossObjectName;
+      this.agentRuntimeConfig.codeConfiguration.ossBucketName =
+        ossConfig.ossBucketName;
+      this.agentRuntimeConfig.codeConfiguration.ossObjectName =
+        ossConfig.ossObjectName;
       delete this.agentRuntimeConfig.codeConfiguration.zipFile;
     } finally {
       if (generateZipFilePath) {
@@ -443,8 +457,8 @@ export class AgentRun {
     const logger = GLogger.getLogger();
     logger.info(chalk.green("Start deploy agent runtime instance."));
 
-    if (this.agentRuntimeConfig.artifactType === 'Code') {
-      logger.info('Processing code upload...');
+    if (this.agentRuntimeConfig.artifactType === "Code") {
+      logger.info("Processing code upload...");
       try {
         await this.processCodeUpload();
       } catch (e) {
@@ -561,12 +575,14 @@ export class AgentRun {
         codeConfig.ossBucketName = userCodeConfig.ossBucketName;
         codeConfig.ossObjectName = userCodeConfig.ossObjectName;
         logger.debug(
-          `Using OSS code: ${userCodeConfig.ossBucketName}/${userCodeConfig.ossObjectName}`
+          `Using OSS code: ${userCodeConfig.ossBucketName}/${userCodeConfig.ossObjectName}`,
         );
       } else {
-        throw new Error('Code must be uploaded to OSS before creating agent runtime');
+        throw new Error(
+          "Code must be uploaded to OSS before creating agent runtime",
+        );
       }
-      
+
       codeConfig.language = userCodeConfig.language;
       codeConfig.command = userCodeConfig.command;
       createInput.codeConfiguration = codeConfig;
@@ -632,9 +648,7 @@ export class AgentRun {
       logger.error(
         `failed to get agent runtime ID from create response. Response body: ${JSON.stringify(resp.body, null, 2)}`,
       );
-      throw new Error(
-        `failed to get agent runtime ID from create response`,
-      );
+      throw new Error(`failed to get agent runtime ID from create response`);
     }
 
     logger.info(
@@ -671,10 +685,12 @@ export class AgentRun {
         codeConfig.ossBucketName = userCodeConfig.ossBucketName;
         codeConfig.ossObjectName = userCodeConfig.ossObjectName;
         logger.debug(
-          `Using OSS code: ${userCodeConfig.ossBucketName}/${userCodeConfig.ossObjectName}`
+          `Using OSS code: ${userCodeConfig.ossBucketName}/${userCodeConfig.ossObjectName}`,
         );
       } else {
-        throw new Error('Code must be uploaded to OSS before updating agent runtime');
+        throw new Error(
+          "Code must be uploaded to OSS before updating agent runtime",
+        );
       }
 
       codeConfig.language = userCodeConfig.language;
@@ -977,12 +993,14 @@ export class AgentRun {
       version: ep.targetVersion,
       status: ep.status,
       description: ep.description,
-      routingConfig: ep.routingConfiguration ? {
-        weights: ep.routingConfiguration.versionWeights?.map((vw: any) => ({
-          version: vw.version,
-          weight: vw.weight,
-        })),
-      } : undefined,
+      routingConfig: ep.routingConfiguration
+        ? {
+            weights: ep.routingConfiguration.versionWeights?.map((vw: any) => ({
+              version: vw.version,
+              weight: vw.weight,
+            })),
+          }
+        : undefined,
     }));
 
     result.agent = {
