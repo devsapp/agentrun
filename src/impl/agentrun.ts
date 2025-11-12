@@ -23,7 +23,7 @@ import Client, {
   ListAgentRuntimesRequest,
   GetAgentRuntimeRequest,
   ListAgentRuntimeEndpointsRequest,
-} from "./../../agentrun-20250910";
+} from "@alicloud/agentrun-20250910";
 import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";

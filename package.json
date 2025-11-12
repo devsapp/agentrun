@@ -24,11 +24,12 @@
     "watch": "tsc -w",
     "format": "prettier --write src/",
     "prebuild": "rimraf dist && npm run format && rimraf node_modules && npm i",
-    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --external:@darabonba/typescript --external:@alicloud/openapi-core --minify --platform=node --format=cjs --target=node10.4 --outfile=dist/index.js",
+    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --minify --platform=node --format=cjs --target=node10.4 --outfile=dist/index.js",
     "postbuild": "cp src/common/schema.json dist/schema.json && cp src/common/schema-delete.json dist/schema-delete.json",
     "publish": "npm i && npm run build && s registry publish"
   },
   "dependencies": {
+    "@alicloud/agentrun-20250910": "file:agentrun-20250910",
     "@alicloud/openapi-client": "^0.4.9",
     "@alicloud/openapi-core": "^1.0.0",
     "@alicloud/tea-console": "^1.0.0",
