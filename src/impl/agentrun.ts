@@ -924,7 +924,8 @@ export class AgentRun {
             );
           if (
             deleteEndpointResp.statusCode != 200 &&
-            deleteEndpointResp.statusCode != 202
+            deleteEndpointResp.statusCode != 202 &&
+            deleteEndpointResp.statusCode != 404
           ) {
             logger.warn(
               `delete endpoint failed, statusCode: ${deleteEndpointResp.statusCode}, requestId: ${deleteEndpointResp.body?.requestId}`,
@@ -943,7 +944,11 @@ export class AgentRun {
     }
 
     const resp = await this.agentRuntimeClient.deleteAgentRuntime(runtimeId);
-    if (resp.statusCode != 200 && resp.statusCode != 202) {
+    if (
+      resp.statusCode != 200 &&
+      resp.statusCode != 202 &&
+      resp.statusCode != 404
+    ) {
       logger.error(
         `delete agent runtime failed, statusCode: ${resp.statusCode}, requestId: ${resp.body?.requestId}`,
       );

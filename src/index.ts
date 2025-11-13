@@ -155,10 +155,16 @@ export default class ComponentAgentRun {
       environmentVariables: environmentVariables || {},
     };
 
+    const convertRuntimeToCustomRuntime = (runtime: string) => {
+      if (runtime === "python3.12") {
+        return "custom.debian11";
+      } else return "custom.debian10";
+    };
+
     // 判断是代码模式还是容器模式
     if (code) {
       // 代码模式
-      fc3Props.runtime = code.language || "custom";
+      fc3Props.runtime = convertRuntimeToCustomRuntime(code.language);
       fc3Props.handler = "index.handler";
 
       // 设置代码位置
