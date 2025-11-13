@@ -20,17 +20,17 @@
       ],
       "default": "cn-hangzhou"
     },
-    "agentRuntime": {
+    "agent": {
       "type": "object",
       "description": "AgentRun runtime configuration for deletion",
       "properties": {
-        "agentRuntimeName": {
+        "name": {
           "type": "string",
           "description": "The unique name of the agent runtime instance to delete"
         }
       },
-      "required": ["agentRuntimeName"]
+      "required": ["name"]
     }
   },
-  "required": ["region", "agentRuntime"]
+  "required": ["region", "agent"]
 }
