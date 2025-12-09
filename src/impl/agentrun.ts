@@ -4,7 +4,7 @@ import { parseArgv, getRootHome } from "@serverless-devs/utils";
 import * as _ from "lodash";
 import GLogger from "../common/logger";
 import path from "path";
-import chalk from "chalk";
+import chalk, { yellow } from "chalk";
 import Client, {
   CreateAgentRuntimeRequest,
   CreateAgentRuntimeInput,
@@ -23,7 +23,7 @@ import Client, {
   ListAgentRuntimesRequest,
   GetAgentRuntimeRequest,
   ListAgentRuntimeEndpointsRequest,
-} from "@alicloud/agentrun-20250910";
+} from "@alicloud/agentrun20250910";
 import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";
@@ -36,6 +36,7 @@ import OSS from "ali-oss";
 import axios from "axios";
 import fs from "fs";
 import zip from "@serverless-devs/zip";
+import Sls from "./sls";
 
 // 常量定义
 const FC_CLIENT_READ_TIMEOUT = 60000;
@@ -86,6 +87,7 @@ export class AgentRun {
   agentRuntimeId: string;
   agentRuntimeClient: Client;
   assumeYes: boolean = false;
+  autolog: boolean = false;
   private fc2Client?: FC2;
 
   constructor(
@@ -217,10 +219,14 @@ export class AgentRun {
     }
 
     if (config.logConfig) {
-      normalized.logConfiguration = {
-        project: config.logConfig.project,
-        logstore: config.logConfig.logstore,
-      };
+      if (config.logConfig === "auto") {
+        this.autolog = true;
+      } else {
+        normalized.logConfiguration = {
+          project: config.logConfig.project,
+          logstore: config.logConfig.logstore,
+        };
+      }
     }
 
     if (config.endpoints && config.endpoints.length > 0) {
@@ -465,6 +471,23 @@ export class AgentRun {
         logger.error(`Failed to upload code: ${e.message}`);
         throw e;
       }
+    }
+
+    if (this.autolog) {
+      // 自动创建sls相关配置
+      const sls = new Sls(this.region, await this.inputs.getCredential());
+      const { project, logstore } = await sls.deploy();
+      logger.write(
+        yellow(`Created log resource succeeded, please replace logConfig: auto in yaml with:
+logConfig:
+  logstore: ${logstore}
+  project: ${project}\n`),
+      );
+
+      this.agentRuntimeConfig.logConfiguration = {
+        project,
+        logstore,
+      };
     }
 
     logger.info(

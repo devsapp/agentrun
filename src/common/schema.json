@@ -179,19 +179,27 @@
           "description": "RAM role ARN for execution"
         },
         "logConfig": {
-          "type": "object",
-          "description": "Log configuration",
-          "properties": {
-            "project": {
-              "type": "string",
-              "description": "SLS project name"
+          "anyOf": [
+            {
+              "type": "object",
+              "description": "Log configuration",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "SLS project name"
+                },
+                "logstore": {
+                  "type": "string",
+                  "description": "SLS logstore name"
+                }
+              },
+              "required": ["project", "logstore"]
             },
-            "logstore": {
-              "type": "string",
-              "description": "SLS logstore name"
+            {
+              "const": "auto",
+              "type": "string"
             }
-          },
-          "required": ["project", "logstore"]
+          ]
         },
         "endpoints": {
           "type": "array",
