@@ -1,0 +1,40 @@
+edition: 3.0.0
+name: agentrun-test-app
+access: default
+
+vars:
+  region: cn-hangzhou
+
+resources:
+  agentrun_code_test:
+    component: ${path('../dist')}  # 指向本地 dist 目录
+    props:
+      region: ${vars.region}
+      agent:
+        name: test-agent-code
+        description: Test agent runtime with code mode
+        code:
+          language: python3.12
+          src: ./code
+          command:
+            - python3
+            - index.py
+        cpu: 1.0
+        memory: 2048
+        port: 8000
+        instanceConcurrency: 10
+        sessionIdleTimeoutSeconds: 3600
+        internetAccess: true
+        environmentVariables:
+          ENV: test
+          DEBUG: "true"
+        logConfig: auto
+        # logConfig:
+        #   project: your-sls-project
+        #   logstore: your-sls-logstore
+        endpoints:
+          - name: production
+            description: Production endpoint
+          - name: staging
+            version: LATEST
+            description: Staging endpoint

@@ -1,0 +1,37 @@
+edition: 3.0.0
+name: agentrun-test-container
+access: default
+
+vars:
+  region: cn-hangzhou
+
+resources:
+  agentrun_container_test:
+    component: ${path('../dist')}
+    props:
+      region: ${vars.region}
+      agent:
+        name: test-agent-container
+        description: Test agent runtime with container mode
+        customContainerConfig:
+          image: registry.cn-hangzhou.aliyuncs.com/your-namespace/your-image:latest
+          command:
+            - python3
+            - app.py
+          imageRegistryType: ACR
+        cpu: 2.0
+        memory: 4096
+        port: 9000
+        instanceConcurrency: 20
+        internetAccess: true
+        environmentVariables:
+          MODE: container
+        protocolConfiguration:
+          type: HTTP
+        healthCheckConfiguration:
+          httpGetUrl: /health
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
