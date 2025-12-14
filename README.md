@@ -1348,7 +1348,7 @@ npm run build
 
 - [Serverless Devs 官网](https://www.serverless-devs.com/)
 - [Serverless Devs 文档](https://docs.serverless-devs.com/)
-- [AgentRun 产品文档](https://help.aliyun.com/product/agentrun)
+- [AgentRun 产品文档](https://functionai.console.aliyun.com/cn-hangzhou/agent/explore)
 - [问题反馈](https://github.com/devsapp/agentrun/issues)
 - [贡献指南](https://github.com/devsapp/agentrun/blob/main/CONTRIBUTING.md)
 
@@ -1357,16 +1357,6 @@ npm run build
 ## 许可证
 
 MIT License
-
----
-
-## 贡献
-
-欢迎贡献代码和提出建议！
-
-- 提交 [Issue](https://github.com/devsapp/agentrun/issues)
-- 提交 [Pull Request](https://github.com/devsapp/agentrun/pulls)
-- 加入钉钉群：xxxxx
 
 ---
 
