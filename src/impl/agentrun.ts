@@ -56,6 +56,13 @@ const createFC2Client = (
     endpoint = `https://${credentials.AccountID}.${region}.fc.aliyuncs.com`;
   }
 
+  // ✅ 添加 https agent 配置
+  const https = require('https');
+  const httpsAgent = new https.Agent({
+    rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
+    keepAlive: true,
+  });
+
   return new FC2(credentials.AccountID, {
     accessKeyID: credentials.AccessKeyID,
     accessKeySecret: credentials.AccessKeySecret,
@@ -64,6 +71,7 @@ const createFC2Client = (
     endpoint,
     secure: true,
     timeout: FC_CLIENT_READ_TIMEOUT,
+    httpsAgent, 
   });
 };
 
@@ -91,6 +99,7 @@ export class AgentRun {
   assumeYes: boolean = false;
   autolog: boolean = false;
   private fc2Client?: FC2;
+  private accountId?: string; // 缓存 AccountID，用于 role ARN 转换
 
   constructor(
     readonly inputs: IInputs,
@@ -119,6 +128,7 @@ export class AgentRun {
       throw new Error("agent configuration is required");
     }
 
+    // 使用旧版本的同步配置转换（保持与旧代码一致）
     this.agentRuntimeConfig = this.normalizeAgentConfig(agentConfig);
     this.assumeYes = this.opts.y;
 
@@ -129,7 +139,39 @@ export class AgentRun {
   }
 
   /**
-   * 将新 YAML 格式转换为内部使用的格式（适配 SDK API）
+   * 规范化角色 ARN（延迟执行版本）
+   * 只在真正需要时才调用，避免影响代码上传流程
+   */
+  private async normalizeRoleArn(role?: string): Promise<string | undefined> {
+    if (!role) {
+      return undefined;
+    }
+
+    // 如果已经是完整的 ARN 格式，直接返回
+    if (role.startsWith('acs:ram::')) {
+      return role;
+    }
+
+    // 如果是简化格式，转换为完整 ARN
+    const logger = GLogger.getLogger();
+    
+    // 获取 AccountID（缓存以避免重复调用）
+    if (!this.accountId) {
+      const credential = await this.inputs.getCredential();
+      this.accountId = credential.AccountID;
+    }
+
+    const fullArn = `acs:ram::${this.accountId}:role/${role}`;
+    
+    logger.debug(
+      `Converting simplified role name "${role}" to full ARN: ${fullArn}`
+    );
+
+    return fullArn;
+  }
+
+  /**
+   * 将新 YAML 格式转换为内部使用的格式（与旧代码保持一致）
    */
   private normalizeAgentConfig(config: any): AgentRuntimeConfig {
     const logger = GLogger.getLogger();
@@ -144,7 +186,7 @@ export class AgentRun {
       sessionConcurrencyLimitPerInstance: config.instanceConcurrency,
       sessionIdleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
       environmentVariables: config.environmentVariables,
-      executionRoleArn: config.role,
+      executionRoleArn: config.role, // 保存原始值，稍后在需要时转换
       credentialName: config.credentialName,
     };
 
@@ -210,7 +252,6 @@ export class AgentRun {
         normalized.networkConfiguration.securityGroupId =
           config.vpcConfig.securityGroupId;
 
-        // ✅ 修正：处理 vswitchIds 数组
         if (config.vpcConfig.vSwitchIds) {
           normalized.networkConfiguration.vswitchIds = Array.isArray(
             config.vpcConfig.vSwitchIds,
@@ -219,14 +260,12 @@ export class AgentRun {
             : [config.vpcConfig.vSwitchIds];
         }
 
-        // 根据 internetAccess 设置网络模式
         if (config.internetAccess !== false) {
           normalized.networkConfiguration.networkMode = "PUBLIC_AND_PRIVATE";
         } else {
           normalized.networkConfiguration.networkMode = "PRIVATE";
         }
       } else {
-        // 没有 VPC 配置时，只根据 internetAccess 决定
         normalized.networkConfiguration.networkMode =
           config.internetAccess !== false ? "PUBLIC" : "PRIVATE";
       }
@@ -276,7 +315,6 @@ export class AgentRun {
           targetVersion: ep.version !== undefined ? String(ep.version) : "LATEST",
         };
 
-        // ✅ 修正：移除权重范围限制，让 API 自己验证
         if (ep.weight !== undefined) {
           normalizedEp.grayTrafficWeight = {
             version: String(ep.version || "LATEST"),
@@ -514,15 +552,14 @@ export class AgentRun {
     }
 
     if (this.autolog) {
-      // 自动创建sls相关配置
       const sls = new Sls(this.region, await this.inputs.getCredential());
       const { project, logstore } = await sls.deploy();
       logger.write(
-  chalk.yellow(`Created log resource succeeded, please replace logConfig: auto in yaml with:
+        chalk.yellow(`Created log resource succeeded, please replace logConfig: auto in yaml with:
 logConfig:
   logstore: ${logstore}
   project: ${project}\n`),
-);
+      );
 
       this.agentRuntimeConfig.logConfiguration = {
         project,
@@ -690,7 +727,6 @@ logConfig:
       networkConfig.networkMode =
         this.agentRuntimeConfig.networkConfiguration.networkMode;
       networkConfig.vpcId = this.agentRuntimeConfig.networkConfiguration.vpcId;
-      // ✅ 修正：使用 vswitchIds 数组
       if (this.agentRuntimeConfig.networkConfiguration.vswitchIds) {
         networkConfig.vswitchIds =
           this.agentRuntimeConfig.networkConfiguration.vswitchIds;
@@ -702,7 +738,13 @@ logConfig:
 
     createInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    createInput.executionRoleArn = this.agentRuntimeConfig.executionRoleArn;
+    
+    // ✅ 在真正需要时才转换 role ARN
+    if (this.agentRuntimeConfig.executionRoleArn) {
+      createInput.executionRoleArn = await this.normalizeRoleArn(
+        this.agentRuntimeConfig.executionRoleArn
+      );
+    }
 
     // 处理日志配置
     if (this.agentRuntimeConfig.logConfiguration) {
@@ -844,7 +886,6 @@ logConfig:
       networkConfig.networkMode =
         this.agentRuntimeConfig.networkConfiguration.networkMode;
       networkConfig.vpcId = this.agentRuntimeConfig.networkConfiguration.vpcId;
-      // ✅ 修正：使用 vswitchIds 数组
       if (this.agentRuntimeConfig.networkConfiguration.vswitchIds) {
         networkConfig.vswitchIds =
           this.agentRuntimeConfig.networkConfiguration.vswitchIds;
@@ -856,7 +897,13 @@ logConfig:
 
     updateInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    updateInput.executionRoleArn = this.agentRuntimeConfig.executionRoleArn;
+    
+    // ✅ 在真正需要时才转换 role ARN
+    if (this.agentRuntimeConfig.executionRoleArn) {
+      updateInput.executionRoleArn = await this.normalizeRoleArn(
+        this.agentRuntimeConfig.executionRoleArn
+      );
+    }
 
     // 处理日志配置
     if (this.agentRuntimeConfig.logConfiguration) {

@@ -199,8 +199,8 @@
         },
         "role": {
           "type": "string",
-          "description": "RAM role ARN for execution",
-          "pattern": "^acs:ram::[0-9]+:role/.+$"
+          "description": "RAM role ARN or simplified role name. Examples: 'acs:ram::123456:role/MyRole' or 'MyRole' (auto-converted)",
+          "pattern": "^(acs:ram::[0-9]+:role/)?[a-zA-Z][a-zA-Z0-9_/-]{0,127}$"
         },
         "credentialName": {
           "type": "string",
