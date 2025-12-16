@@ -4,7 +4,7 @@ import { parseArgv, getRootHome } from "@serverless-devs/utils";
 import * as _ from "lodash";
 import GLogger from "../common/logger";
 import path from "path";
-import chalk, { yellow } from "chalk";
+import chalk from "chalk";
 import Client, {
   CreateAgentRuntimeRequest,
   CreateAgentRuntimeInput,
@@ -18,6 +18,8 @@ import Client, {
   ContainerConfiguration,
   NetworkConfiguration,
   LogConfiguration,
+  ProtocolConfiguration,
+  HealthCheckConfiguration,
   RoutingConfiguration,
   VersionWeight,
   ListAgentRuntimesRequest,
@@ -54,6 +56,13 @@ const createFC2Client = (
     endpoint = `https://${credentials.AccountID}.${region}.fc.aliyuncs.com`;
   }
 
+  // ✅ 添加 https agent 配置
+  const https = require("https");
+  const httpsAgent = new https.Agent({
+    rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
+    keepAlive: true,
+  });
+
   return new FC2(credentials.AccountID, {
     accessKeyID: credentials.AccessKeyID,
     accessKeySecret: credentials.AccessKeySecret,
@@ -62,6 +71,7 @@ const createFC2Client = (
     endpoint,
     secure: true,
     timeout: FC_CLIENT_READ_TIMEOUT,
+    httpsAgent,
   });
 };
 
@@ -89,6 +99,7 @@ export class AgentRun {
   assumeYes: boolean = false;
   autolog: boolean = false;
   private fc2Client?: FC2;
+  private accountId?: string; // 缓存 AccountID，用于 role ARN 转换
 
   constructor(
     readonly inputs: IInputs,
@@ -117,6 +128,7 @@ export class AgentRun {
       throw new Error("agent configuration is required");
     }
 
+    // 使用旧版本的同步配置转换（保持与旧代码一致）
     this.agentRuntimeConfig = this.normalizeAgentConfig(agentConfig);
     this.assumeYes = this.opts.y;
 
@@ -127,7 +139,39 @@ export class AgentRun {
   }
 
   /**
-   * 将新 YAML 格式转换为内部使用的格式（适配 SDK API）
+   * 规范化角色 ARN（延迟执行版本）
+   * 只在真正需要时才调用，避免影响代码上传流程
+   */
+  private async normalizeRoleArn(role?: string): Promise<string | undefined> {
+    if (!role) {
+      return undefined;
+    }
+
+    // 如果已经是完整的 ARN 格式，直接返回
+    if (role.startsWith("acs:ram::")) {
+      return role;
+    }
+
+    // 如果是简化格式，转换为完整 ARN
+    const logger = GLogger.getLogger();
+
+    // 获取 AccountID（缓存以避免重复调用）
+    if (!this.accountId) {
+      const credential = await this.inputs.getCredential();
+      this.accountId = credential.AccountID;
+    }
+
+    const fullArn = `acs:ram::${this.accountId}:role/${role}`;
+
+    logger.debug(
+      `Converting simplified role name "${role}" to full ARN: ${fullArn}`,
+    );
+
+    return fullArn;
+  }
+
+  /**
+   * 将新 YAML 格式转换为内部使用的格式（与旧代码保持一致）
    */
   private normalizeAgentConfig(config: any): AgentRuntimeConfig {
     const logger = GLogger.getLogger();
@@ -140,10 +184,13 @@ export class AgentRun {
       memory: config.memory,
       port: config.port,
       sessionConcurrencyLimitPerInstance: config.instanceConcurrency,
+      sessionIdleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
       environmentVariables: config.environmentVariables,
-      executionRoleArn: config.role,
+      executionRoleArn: config.role, // 保存原始值，稍后在需要时转换
+      credentialName: config.credentialName,
     };
 
+    // 处理代码配置
     if (config.code) {
       if (typeof config.code !== "object") {
         throw new Error(
@@ -168,6 +215,7 @@ export class AgentRun {
       normalized.codeConfiguration = {
         language: config.code.language,
         command: config.code.command || [],
+        checksum: config.code.checksum,
       };
 
       if (config.code.src) {
@@ -177,6 +225,7 @@ export class AgentRun {
         normalized.codeConfiguration.ossObjectName = config.code.ossObjectName;
       }
     } else if (config.customContainerConfig) {
+      // 处理容器配置
       normalized.artifactType = "Container";
 
       let command = config.customContainerConfig.command;
@@ -187,11 +236,14 @@ export class AgentRun {
       normalized.containerConfiguration = {
         image: config.customContainerConfig.image,
         command: command || [],
+        imageRegistryType: config.customContainerConfig.imageRegistryType,
+        acrInstanceId: config.customContainerConfig.acrInstanceId,
       };
     } else {
       throw new Error("Either code or customContainerConfig must be provided");
     }
 
+    // 处理网络配置
     if (config.vpcConfig || config.internetAccess !== undefined) {
       normalized.networkConfiguration = {};
 
@@ -201,23 +253,25 @@ export class AgentRun {
           config.vpcConfig.securityGroupId;
 
         if (config.vpcConfig.vSwitchIds) {
-          normalized.networkConfiguration.vswitchId = Array.isArray(
+          normalized.networkConfiguration.vswitchIds = Array.isArray(
             config.vpcConfig.vSwitchIds,
           )
-            ? config.vpcConfig.vSwitchIds[0]
-            : config.vpcConfig.vSwitchIds;
+            ? config.vpcConfig.vSwitchIds
+            : [config.vpcConfig.vSwitchIds];
         }
 
-        if (config.internetAccess) {
+        if (config.internetAccess !== false) {
           normalized.networkConfiguration.networkMode = "PUBLIC_AND_PRIVATE";
         } else {
           normalized.networkConfiguration.networkMode = "PRIVATE";
         }
-      } else if (config.internetAccess) {
-        normalized.networkConfiguration.networkMode = "PUBLIC";
+      } else {
+        normalized.networkConfiguration.networkMode =
+          config.internetAccess !== false ? "PUBLIC" : "PRIVATE";
       }
     }
 
+    // 处理日志配置
     if (config.logConfig) {
       if (config.logConfig === "auto") {
         this.autolog = true;
@@ -229,15 +283,37 @@ export class AgentRun {
       }
     }
 
+    // 处理协议配置
+    if (config.protocolConfiguration) {
+      normalized.protocolConfiguration = {
+        type: config.protocolConfiguration.type || "HTTP",
+      };
+    }
+
+    // 处理健康检查配置
+    if (config.healthCheckConfiguration) {
+      normalized.healthCheckConfiguration = {
+        httpGetUrl: config.healthCheckConfiguration.httpGetUrl || "/health",
+        initialDelaySeconds:
+          config.healthCheckConfiguration.initialDelaySeconds || 30,
+        periodSeconds: config.healthCheckConfiguration.periodSeconds || 30,
+        timeoutSeconds: config.healthCheckConfiguration.timeoutSeconds || 3,
+        failureThreshold: config.healthCheckConfiguration.failureThreshold || 3,
+        successThreshold: config.healthCheckConfiguration.successThreshold || 1,
+      };
+    }
+
+    // 处理端点配置
     if (config.endpoints && config.endpoints.length > 0) {
       normalized.endpoints = config.endpoints.map((ep: any) => {
         const normalizedEp: any = {
           endpointName: ep.name,
           description: ep.description,
-          targetVersion: ep.version,
+          targetVersion:
+            ep.version !== undefined ? String(ep.version) : "LATEST",
         };
 
-        if (ep.weight !== undefined && ep.weight > 0 && ep.weight < 1) {
+        if (ep.weight !== undefined) {
           normalizedEp.grayTrafficWeight = {
             version: String(ep.version || "LATEST"),
             weight: ep.weight,
@@ -474,11 +550,10 @@ export class AgentRun {
     }
 
     if (this.autolog) {
-      // 自动创建sls相关配置
       const sls = new Sls(this.region, await this.inputs.getCredential());
       const { project, logstore } = await sls.deploy();
       logger.write(
-        yellow(`Created log resource succeeded, please replace logConfig: auto in yaml with:
+        chalk.yellow(`Created log resource succeeded, please replace logConfig: auto in yaml with:
 logConfig:
   logstore: ${logstore}
   project: ${project}\n`),
@@ -587,6 +662,16 @@ logConfig:
         this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance;
     }
 
+    if (this.agentRuntimeConfig.sessionIdleTimeoutSeconds !== undefined) {
+      createInput.sessionIdleTimeoutSeconds =
+        this.agentRuntimeConfig.sessionIdleTimeoutSeconds;
+    }
+
+    if (this.agentRuntimeConfig.credentialName) {
+      createInput.credentialName = this.agentRuntimeConfig.credentialName;
+    }
+
+    // 处理代码配置
     if (
       this.agentRuntimeConfig.artifactType === "Code" &&
       this.agentRuntimeConfig.codeConfiguration
@@ -608,9 +693,13 @@ logConfig:
 
       codeConfig.language = userCodeConfig.language;
       codeConfig.command = userCodeConfig.command;
+      if (userCodeConfig.checksum) {
+        codeConfig.checksum = userCodeConfig.checksum;
+      }
       createInput.codeConfiguration = codeConfig;
     }
 
+    // 处理容器配置
     if (
       this.agentRuntimeConfig.artifactType === "Container" &&
       this.agentRuntimeConfig.containerConfiguration
@@ -620,18 +709,25 @@ logConfig:
         this.agentRuntimeConfig.containerConfiguration;
       containerConfig.image = userContainerConfig.image;
       containerConfig.command = userContainerConfig.command;
+      if (userContainerConfig.imageRegistryType) {
+        containerConfig.imageRegistryType =
+          userContainerConfig.imageRegistryType;
+      }
+      if (userContainerConfig.acrInstanceId) {
+        containerConfig.acrInstanceId = userContainerConfig.acrInstanceId;
+      }
       createInput.containerConfiguration = containerConfig;
     }
 
+    // 处理网络配置
     if (this.agentRuntimeConfig.networkConfiguration) {
       const networkConfig = new NetworkConfiguration();
       networkConfig.networkMode =
         this.agentRuntimeConfig.networkConfiguration.networkMode;
       networkConfig.vpcId = this.agentRuntimeConfig.networkConfiguration.vpcId;
-      if (this.agentRuntimeConfig.networkConfiguration.vswitchId) {
-        networkConfig.vswitchIds = [
-          this.agentRuntimeConfig.networkConfiguration.vswitchId,
-        ];
+      if (this.agentRuntimeConfig.networkConfiguration.vswitchIds) {
+        networkConfig.vswitchIds =
+          this.agentRuntimeConfig.networkConfiguration.vswitchIds;
       }
       networkConfig.securityGroupId =
         this.agentRuntimeConfig.networkConfiguration.securityGroupId;
@@ -640,13 +736,41 @@ logConfig:
 
     createInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    createInput.executionRoleArn = this.agentRuntimeConfig.executionRoleArn;
 
+    // ✅ 在真正需要时才转换 role ARN
+    if (this.agentRuntimeConfig.executionRoleArn) {
+      createInput.executionRoleArn = await this.normalizeRoleArn(
+        this.agentRuntimeConfig.executionRoleArn,
+      );
+    }
+
+    // 处理日志配置
     if (this.agentRuntimeConfig.logConfiguration) {
       const logConfig = new LogConfiguration();
       logConfig.project = this.agentRuntimeConfig.logConfiguration.project;
       logConfig.logstore = this.agentRuntimeConfig.logConfiguration.logstore;
       createInput.logConfiguration = logConfig;
+    }
+
+    // 处理协议配置
+    if (this.agentRuntimeConfig.protocolConfiguration) {
+      const protocolConfig = new ProtocolConfiguration();
+      protocolConfig.type = this.agentRuntimeConfig.protocolConfiguration.type;
+      createInput.protocolConfiguration = protocolConfig;
+    }
+
+    // 处理健康检查配置
+    if (this.agentRuntimeConfig.healthCheckConfiguration) {
+      const healthCheckConfig = new HealthCheckConfiguration();
+      const userHealthCheck = this.agentRuntimeConfig.healthCheckConfiguration;
+      healthCheckConfig.httpGetUrl = userHealthCheck.httpGetUrl;
+      healthCheckConfig.initialDelaySeconds =
+        userHealthCheck.initialDelaySeconds;
+      healthCheckConfig.periodSeconds = userHealthCheck.periodSeconds;
+      healthCheckConfig.timeoutSeconds = userHealthCheck.timeoutSeconds;
+      healthCheckConfig.failureThreshold = userHealthCheck.failureThreshold;
+      healthCheckConfig.successThreshold = userHealthCheck.successThreshold;
+      createInput.healthCheckConfiguration = healthCheckConfig;
     }
 
     const createRequest = new CreateAgentRuntimeRequest();
@@ -697,6 +821,16 @@ logConfig:
         this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance;
     }
 
+    if (this.agentRuntimeConfig.sessionIdleTimeoutSeconds !== undefined) {
+      updateInput.sessionIdleTimeoutSeconds =
+        this.agentRuntimeConfig.sessionIdleTimeoutSeconds;
+    }
+
+    if (this.agentRuntimeConfig.credentialName) {
+      updateInput.credentialName = this.agentRuntimeConfig.credentialName;
+    }
+
+    // 处理代码配置
     if (
       this.agentRuntimeConfig.artifactType === "Code" &&
       this.agentRuntimeConfig.codeConfiguration
@@ -718,9 +852,13 @@ logConfig:
 
       codeConfig.language = userCodeConfig.language;
       codeConfig.command = userCodeConfig.command;
+      if (userCodeConfig.checksum) {
+        codeConfig.checksum = userCodeConfig.checksum;
+      }
       updateInput.codeConfiguration = codeConfig;
     }
 
+    // 处理容器配置
     if (
       this.agentRuntimeConfig.artifactType === "Container" &&
       this.agentRuntimeConfig.containerConfiguration
@@ -730,18 +868,25 @@ logConfig:
         this.agentRuntimeConfig.containerConfiguration;
       containerConfig.image = userContainerConfig.image;
       containerConfig.command = userContainerConfig.command;
+      if (userContainerConfig.imageRegistryType) {
+        containerConfig.imageRegistryType =
+          userContainerConfig.imageRegistryType;
+      }
+      if (userContainerConfig.acrInstanceId) {
+        containerConfig.acrInstanceId = userContainerConfig.acrInstanceId;
+      }
       updateInput.containerConfiguration = containerConfig;
     }
 
+    // 处理网络配置
     if (this.agentRuntimeConfig.networkConfiguration) {
       const networkConfig = new NetworkConfiguration();
       networkConfig.networkMode =
         this.agentRuntimeConfig.networkConfiguration.networkMode;
       networkConfig.vpcId = this.agentRuntimeConfig.networkConfiguration.vpcId;
-      if (this.agentRuntimeConfig.networkConfiguration.vswitchId) {
-        networkConfig.vswitchIds = [
-          this.agentRuntimeConfig.networkConfiguration.vswitchId,
-        ];
+      if (this.agentRuntimeConfig.networkConfiguration.vswitchIds) {
+        networkConfig.vswitchIds =
+          this.agentRuntimeConfig.networkConfiguration.vswitchIds;
       }
       networkConfig.securityGroupId =
         this.agentRuntimeConfig.networkConfiguration.securityGroupId;
@@ -750,13 +895,41 @@ logConfig:
 
     updateInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    updateInput.executionRoleArn = this.agentRuntimeConfig.executionRoleArn;
 
+    // ✅ 在真正需要时才转换 role ARN
+    if (this.agentRuntimeConfig.executionRoleArn) {
+      updateInput.executionRoleArn = await this.normalizeRoleArn(
+        this.agentRuntimeConfig.executionRoleArn,
+      );
+    }
+
+    // 处理日志配置
     if (this.agentRuntimeConfig.logConfiguration) {
       const logConfig = new LogConfiguration();
       logConfig.project = this.agentRuntimeConfig.logConfiguration.project;
       logConfig.logstore = this.agentRuntimeConfig.logConfiguration.logstore;
       updateInput.logConfiguration = logConfig;
+    }
+
+    // 处理协议配置
+    if (this.agentRuntimeConfig.protocolConfiguration) {
+      const protocolConfig = new ProtocolConfiguration();
+      protocolConfig.type = this.agentRuntimeConfig.protocolConfiguration.type;
+      updateInput.protocolConfiguration = protocolConfig;
+    }
+
+    // 处理健康检查配置
+    if (this.agentRuntimeConfig.healthCheckConfiguration) {
+      const healthCheckConfig = new HealthCheckConfiguration();
+      const userHealthCheck = this.agentRuntimeConfig.healthCheckConfiguration;
+      healthCheckConfig.httpGetUrl = userHealthCheck.httpGetUrl;
+      healthCheckConfig.initialDelaySeconds =
+        userHealthCheck.initialDelaySeconds;
+      healthCheckConfig.periodSeconds = userHealthCheck.periodSeconds;
+      healthCheckConfig.timeoutSeconds = userHealthCheck.timeoutSeconds;
+      healthCheckConfig.failureThreshold = userHealthCheck.failureThreshold;
+      healthCheckConfig.successThreshold = userHealthCheck.successThreshold;
+      updateInput.healthCheckConfiguration = healthCheckConfig;
     }
 
     const updateRequest = new UpdateAgentRuntimeRequest();
@@ -821,7 +994,7 @@ logConfig:
     }
   }
 
-  private async createEndpoint(endpointConfig: any): Promise<void> {
+  public async createEndpoint(endpointConfig: any): Promise<void> {
     const logger = GLogger.getLogger();
     const endpointInput = new CreateAgentRuntimeEndpointInput();
     endpointInput.agentRuntimeEndpointName = endpointConfig.endpointName;
@@ -868,7 +1041,7 @@ logConfig:
     }
   }
 
-  private async updateAgentRuntimeEndpoint(
+  public async updateAgentRuntimeEndpoint(
     runtimeId: string,
     endpointId: string,
     endpointConfig: any,
@@ -1055,7 +1228,7 @@ logConfig:
     return result;
   }
 
-  private async listEndpoints(runtimeId: string) {
+  public async listEndpoints(runtimeId: string) {
     const listRequest = new ListAgentRuntimeEndpointsRequest();
     listRequest.pageNumber = 1;
     listRequest.pageSize = 100;
@@ -1187,5 +1360,32 @@ logConfig:
     }
 
     logger.warn("timeout waiting for endpoints to be ready, but continuing...");
+  }
+
+  // ============================================
+  // 公共方法：供外部模块使用
+  // ============================================
+
+  /**
+   * 公共方法：查找 Agent Runtime 并返回 ID
+   * 供外部模块（如 logs、instance、concurrency、version、endpoint）使用
+   */
+  public async getAgentRuntimeIdByName(): Promise<string> {
+    await this.initClient("query");
+    const runtimeId = await this.findAgentRuntimeByName();
+    if (!runtimeId) {
+      throw new Error(
+        `Agent runtime ${this.agentRuntimeConfig.agentRuntimeName} not found`,
+      );
+    }
+    return runtimeId;
+  }
+
+  /**
+   * 公共方法：初始化客户端
+   * 供外部模块使用
+   */
+  public async initializeClient(command: string) {
+    await this.initClient(command);
   }
 }

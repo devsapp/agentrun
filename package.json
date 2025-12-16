@@ -1,6 +1,6 @@
 {
   "name": "AgentRunComponent",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "This is agentrun component for Serverless Devs Tool",
   "autoInstall": false,
   "homepage": "https://www.serverless-devs.com",
@@ -23,35 +23,36 @@
     "start": "npm run watch",
     "watch": "tsc -w",
     "format": "prettier --write src/",
-    "prebuild": "rimraf dist && npm run format && rimraf node_modules && npm i",
-    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --minify --platform=node --format=cjs --target=node10.4 --outfile=dist/index.js",
+    "prebuild": "rimraf dist && npm run format",
+    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --minify --platform=node --format=cjs --target=node14 --outfile=dist/index.js",
     "postbuild": "cp src/common/schema.json dist/schema.json && cp src/common/schema-delete.json dist/schema-delete.json",
+    "test": "echo \"Error: no test specified\" && exit 0",
+    "prepublishOnly": "npm run build",
     "publish": "npm i && npm run build && s registry publish"
   },
   "dependencies": {
-    "@alicloud/agentrun20250910": "^3.1.0",
+    "@alicloud/agentrun20250910": "^4.0.2",
     "@alicloud/openapi-client": "^0.4.9",
-    "@alicloud/openapi-core": "^1.0.0",
-    "@serverless-cd/srm-aliyun-sls20201230": "0.0.4",
-    "@alicloud/tea-console": "^1.0.0",
     "@alicloud/tea-typescript": "^1.8.0",
     "@alicloud/tea-util": "^1.4.8",
     "@alicloud/fc2": "^2.6.6",
-    "@alicloud/fc20230330": "4.6.3",
-    "@darabonba/typescript": "^1.0.0",
-    "ajv": "^8.13.0",
+    "@alicloud/fc20230330": "^4.6.3",
     "@serverless-devs/component-interface": "^0.0.4",
     "@serverless-devs/logger": "^0.0.5",
     "@serverless-devs/load-component": "*",
     "@serverless-devs/utils": "^0.0.15",
-    "chalk": "^4.1.0",
-    "inquirer": "^8.2.6",
     "@serverless-devs/zip": "^0.0.3-beta.8",
+    "ajv": "^8.13.0",
+    "ali-oss": "^6.20.0",
+    "axios": "^1.7.9",
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.6",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.13",
     "@types/node": "^20.12.12",
     "esbuild": "^0.21.5",
     "prettier": "^3.2.5",
@@ -60,4 +61,3 @@
     "typescript": "^5.4.5"
   }
 }
-

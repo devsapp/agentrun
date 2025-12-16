@@ -34,12 +34,13 @@ export interface AgentConfig {
   // 资源配置
   cpu?: number; // CPU 核数，默认 1.0
   memory?: number; // 内存 MB，默认 2048
-  diskSize?: number; // 磁盘 MB，默认 512
-  timeout?: number; // 超时时间（秒），默认 600
 
   // 端口和并发
   port?: number; // 端口号，默认 8000
   instanceConcurrency?: number; // 实例并发数，默认 10
+
+  // 会话配置
+  sessionIdleTimeoutSeconds?: number; // 会话空闲超时（秒），默认 3600
 
   // 网络配置
   vpcConfig?: VpcConfig; // VPC 配置
@@ -48,11 +49,18 @@ export interface AgentConfig {
   // 环境变量
   environmentVariables?: { [key: string]: string };
 
-  // 执行角色
+  // 执行角色和凭证
   role?: string; // RAM 角色 ARN
+  credentialName?: string; // 访问凭证名称
 
   // 日志配置
   logConfig?: LogConfig;
+
+  // 协议配置
+  protocolConfiguration?: ProtocolConfig;
+
+  // 健康检查配置
+  healthCheckConfiguration?: HealthCheckConfig;
 
   // 端点配置
   endpoints?: EndpointConfig[];
@@ -79,14 +87,17 @@ export interface CodeConfig {
 
   // 运行命令（可选）
   command?: string[];
+
+  // CRC-64 校验值（可选）
+  checksum?: string;
 }
 
 // 容器配置
 export interface CustomContainerConfig {
   image: string;
   command?: string[];
-  entrypoint?: string[];
-  port?: number;
+  imageRegistryType?: "ACR" | "ACREE" | "CUSTOM"; // 镜像源类型
+  acrInstanceId?: string; // ACR 实例 ID
 }
 
 // VPC 配置
@@ -102,10 +113,25 @@ export interface LogConfig {
   logstore: string; // SLS 日志库名称
 }
 
+// 协议配置
+export interface ProtocolConfig {
+  type: "HTTP" | "HTTPS"; // 协议类型
+}
+
+// 健康检查配置
+export interface HealthCheckConfig {
+  httpGetUrl?: string; // HTTP GET URL，默认 /health
+  initialDelaySeconds?: number; // 初始延迟（秒），默认 30
+  periodSeconds?: number; // 检查间隔（秒），默认 30
+  timeoutSeconds?: number; // 超时时间（秒），默认 3
+  failureThreshold?: number; // 失败阈值，默认 3
+  successThreshold?: number; // 成功阈值，默认 1
+}
+
 // 端点配置
 export interface EndpointConfig {
   name: string;
-  version?: number;
+  version?: number | string; // 支持数字或 "LATEST"
   description?: string;
   weight?: number; // 灰度流量权重 (0.0-1.0)
 }
@@ -181,14 +207,18 @@ export interface AgentRuntimeConfig {
   artifactType: "Code" | "Container";
   codeConfiguration?: CodeConfiguration;
   containerConfiguration?: ContainerConfiguration;
-  cpu: number;
-  memory: number;
-  port: number;
+  cpu?: number;
+  memory?: number;
+  port?: number;
   sessionConcurrencyLimitPerInstance?: number;
-  networkConfiguration: NetworkConfiguration;
+  sessionIdleTimeoutSeconds?: number;
+  networkConfiguration?: NetworkConfiguration;
   environmentVariables?: { [key: string]: string };
   executionRoleArn?: string;
+  credentialName?: string;
   logConfiguration?: LogConfiguration;
+  protocolConfiguration?: ProtocolConfiguration;
+  healthCheckConfiguration?: HealthCheckConfiguration;
   endpoints?: EndpointConfigInternal[];
 }
 
@@ -198,23 +228,39 @@ export interface CodeConfiguration {
   ossObjectName?: string;
   language?: string;
   command?: string[];
+  checksum?: string;
 }
 
 export interface ContainerConfiguration {
   image: string;
   command?: string[];
+  imageRegistryType?: "ACR" | "ACREE" | "CUSTOM";
+  acrInstanceId?: string;
 }
 
 export interface NetworkConfiguration {
   networkMode: "PUBLIC" | "PRIVATE" | "PUBLIC_AND_PRIVATE";
   vpcId?: string;
-  vswitchId?: string;
+  vswitchIds?: string[]; // ✅ 改为复数数组
   securityGroupId?: string;
 }
 
 export interface LogConfiguration {
   project: string;
   logstore: string;
+}
+
+export interface ProtocolConfiguration {
+  type: "HTTP" | "HTTPS";
+}
+
+export interface HealthCheckConfiguration {
+  httpGetUrl?: string;
+  initialDelaySeconds?: number;
+  periodSeconds?: number;
+  timeoutSeconds?: number;
+  failureThreshold?: number;
+  successThreshold?: number;
 }
 
 export interface EndpointConfigInternal {

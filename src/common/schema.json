@@ -26,42 +26,56 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The unique name of the agent runtime instance"
+          "description": "The unique name of the agent runtime instance",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,127}$"
         },
         "description": {
           "type": "string",
-          "description": "Description of the agent runtime"
+          "description": "Description of the agent runtime",
+          "maxLength": 256
         },
         "code": {
           "type": "object",
-          "description": "Code configuration (must be an object)",
+          "description": "Code configuration",
           "properties": {
             "language": {
               "type": "string",
-              "description": "Programming language"
+              "description": "Programming language runtime",
+              "enum": [
+                "python3.10",
+                "python3.12",
+                "nodejs18",
+                "nodejs20",
+                "java8",
+                "java11",
+                "java17"
+              ]
             },
             "command": {
               "type": "array",
               "description": "Command to run the code",
               "items": {
                 "type": "string"
-              },
-              "minItems": 1
+              }
             },
             "src": {
               "type": "string",
-              "description": "Local path to code directory or zip file"
+              "description": "Local path to code directory or zip file (will be uploaded to OSS)"
             },
             "ossBucketName": {
               "type": "string",
-              "description": "OSS bucket name"
+              "description": "OSS bucket name for code package"
             },
             "ossObjectName": {
               "type": "string",
-              "description": "OSS object name"
+              "description": "OSS object name for code package"
+            },
+            "checksum": {
+              "type": "string",
+              "description": "CRC-64 checksum of the code package"
             }
           },
-          "required": ["language", "command"],
+          "required": ["language"],
           "oneOf": [
             {
               "required": ["src"],
@@ -88,16 +102,15 @@
                 "type": "string"
               }
             },
-            "entrypoint": {
-              "type": "array",
-              "description": "Container entrypoint",
-              "items": {
-                "type": "string"
-              }
+            "imageRegistryType": {
+              "type": "string",
+              "description": "Container image registry type",
+              "enum": ["ACR", "ACREE", "CUSTOM"],
+              "default": "ACR"
             },
-            "port": {
-              "type": "number",
-              "description": "Container port"
+            "acrInstanceId": {
+              "type": "string",
+              "description": "ACR instance ID (required when imageRegistryType is ACR or ACREE)"
             }
           },
           "required": ["image"]
@@ -105,32 +118,37 @@
         "cpu": {
           "type": "number",
           "description": "CPU resources in cores",
-          "default": 1.0
+          "default": 1.0,
+          "minimum": 0.05,
+          "maximum": 16
         },
         "memory": {
           "type": "number",
           "description": "Memory resources in MB",
-          "default": 2048
-        },
-        "diskSize": {
-          "type": "number",
-          "description": "Disk size in MB",
-          "default": 512
-        },
-        "timeout": {
-          "type": "number",
-          "description": "Timeout in seconds",
-          "default": 600
+          "default": 2048,
+          "minimum": 128,
+          "maximum": 32768
         },
         "port": {
           "type": "number",
-          "description": "Port number",
-          "default": 8000
+          "description": "Port number for the agent runtime service",
+          "default": 8000,
+          "minimum": 1,
+          "maximum": 65535
         },
         "instanceConcurrency": {
           "type": "number",
           "description": "Maximum concurrent sessions per instance",
-          "default": 10
+          "default": 10,
+          "minimum": 1,
+          "maximum": 200
+        },
+        "sessionIdleTimeoutSeconds": {
+          "type": "number",
+          "description": "Session idle timeout in seconds",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400
         },
         "vpcConfig": {
           "type": "object",
@@ -138,26 +156,31 @@
           "properties": {
             "vpcId": {
               "type": "string",
-              "description": "VPC ID"
+              "description": "VPC ID",
+              "pattern": "^vpc-[a-z0-9]+$"
             },
             "vSwitchIds": {
               "oneOf": [
                 {
                   "type": "string",
-                  "description": "Single VSwitch ID"
+                  "description": "Single VSwitch ID",
+                  "pattern": "^vsw-[a-z0-9]+$"
                 },
                 {
                   "type": "array",
-                  "description": "Multiple VSwitch IDs",
+                  "description": "Multiple VSwitch IDs for high availability",
                   "items": {
-                    "type": "string"
-                  }
+                    "type": "string",
+                    "pattern": "^vsw-[a-z0-9]+$"
+                  },
+                  "minItems": 1
                 }
               ]
             },
             "securityGroupId": {
               "type": "string",
-              "description": "Security group ID"
+              "description": "Security group ID",
+              "pattern": "^sg-[a-z0-9]+$"
             }
           },
           "required": ["vpcId", "vSwitchIds", "securityGroupId"]
@@ -176,13 +199,20 @@
         },
         "role": {
           "type": "string",
-          "description": "RAM role ARN for execution"
+          "description": "RAM role ARN or simplified role name. Examples: 'acs:ram::123456:role/MyRole' or 'MyRole' (auto-converted)",
+          "pattern": "^(acs:ram::[0-9]+:role/)?[a-zA-Z][a-zA-Z0-9_/-]{0,127}$"
+        },
+        "credentialName": {
+          "type": "string",
+          "description": "Credential name for accessing the agent runtime",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
         },
         "logConfig": {
-          "anyOf": [
+          "description": "Log configuration",
+          "oneOf": [
             {
               "type": "object",
-              "description": "Log configuration",
+              "description": "Manual SLS configuration",
               "properties": {
                 "project": {
                   "type": "string",
@@ -193,13 +223,74 @@
                   "description": "SLS logstore name"
                 }
               },
-              "required": ["project", "logstore"]
+              "required": ["project", "logstore"],
+              "additionalProperties": false
             },
             {
-              "const": "auto",
-              "type": "string"
+              "type": "string",
+              "description": "Auto create SLS resources",
+              "enum": ["auto"]
             }
           ]
+        },
+        "protocolConfiguration": {
+          "type": "object",
+          "description": "Protocol configuration",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Protocol type",
+              "enum": ["HTTP", "HTTPS"],
+              "default": "HTTP"
+            }
+          }
+        },
+        "healthCheckConfiguration": {
+          "type": "object",
+          "description": "Health check configuration",
+          "properties": {
+            "httpGetUrl": {
+              "type": "string",
+              "description": "HTTP GET URL for health check",
+              "default": "/health"
+            },
+            "initialDelaySeconds": {
+              "type": "number",
+              "description": "Initial delay before first health check (seconds)",
+              "default": 30,
+              "minimum": 0,
+              "maximum": 300
+            },
+            "periodSeconds": {
+              "type": "number",
+              "description": "Health check interval (seconds)",
+              "default": 30,
+              "minimum": 1,
+              "maximum": 300
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "description": "Health check timeout (seconds)",
+              "default": 3,
+              "minimum": 1,
+              "maximum": 60
+            },
+            "failureThreshold": {
+              "type": "number",
+              "description": "Consecutive failures before marking unhealthy",
+              "default": 3,
+              "minimum": 1,
+              "maximum": 10
+            },
+            "successThreshold": {
+              "type": "number",
+              "description": "Consecutive successes before marking healthy",
+              "default": 1,
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "additionalProperties": false
         },
         "endpoints": {
           "type": "array",
@@ -209,24 +300,42 @@
             "properties": {
               "name": {
                 "type": "string",
-                "description": "Endpoint name"
+                "description": "Endpoint name",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
               },
               "version": {
-                "type": "string",
-                "description": "Target version number"
+                "description": "Target version number or LATEST",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": ["LATEST"]
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$"
+                  }
+                ]
               },
               "description": {
                 "type": "string",
-                "description": "Endpoint description"
+                "description": "Endpoint description",
+                "maxLength": 256
               },
               "weight": {
                 "type": "number",
                 "description": "Gray traffic weight (0.0-1.0)",
                 "minimum": 0,
-                "maximum": 1
+                "maximum": 1,
+                "exclusiveMinimum": 0,
+                "exclusiveMaximum": 1
               }
             },
-            "required": ["name"]
+            "required": ["name"],
+            "additionalProperties": false
           }
         }
       },
@@ -240,8 +349,10 @@
           "required": ["customContainerConfig"],
           "description": "Container-based agent runtime"
         }
-      ]
+      ],
+      "additionalProperties": true
     }
   },
-  "required": ["region", "agent"]
+  "required": ["region", "agent"],
+  "additionalProperties": true
 }
