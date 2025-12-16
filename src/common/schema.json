@@ -350,9 +350,9 @@
           "description": "Container-based agent runtime"
         }
       ],
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": ["region", "agent"],
-  "additionalProperties": false
+  "additionalProperties": true
 }
