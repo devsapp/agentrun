@@ -1,6 +1,6 @@
 {
   "name": "AgentRunComponent",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "This is agentrun component for Serverless Devs Tool",
   "autoInstall": false,
   "homepage": "https://www.serverless-devs.com",
@@ -24,11 +24,11 @@
     "watch": "tsc -w",
     "format": "prettier --write src/",
     "prebuild": "rimraf dist && npm run format",
-    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --external:ali-oss --external:axios --minify --platform=node --format=cjs --target=node14 --outfile=dist/index.js",
+    "build": "esbuild src/index.ts --bundle --log-level=error --external:proxy-agent --minify --platform=node --format=cjs --target=node14 --outfile=dist/index.js",
     "postbuild": "cp src/common/schema.json dist/schema.json && cp src/common/schema-delete.json dist/schema-delete.json",
     "test": "echo \"Error: no test specified\" && exit 0",
     "prepublishOnly": "npm run build",
-    "publish": "npm run build && s registry publish"
+    "publish": "npm i && npm run build && s registry publish"
   },
   "dependencies": {
     "@alicloud/agentrun20250910": "^4.0.2",

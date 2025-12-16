@@ -283,7 +283,10 @@ export default class ComponentAgentRun {
               `,
               summary: "Set reserved concurrency",
               option: [
-                ["--reserved-concurrency <number>", "Reserved concurrency value (required)"],
+                [
+                  "--reserved-concurrency <number>",
+                  "Reserved concurrency value (required)",
+                ],
               ],
             },
           },
@@ -301,9 +304,7 @@ export default class ComponentAgentRun {
                 $ s concurrency remove -y
               `,
               summary: "Remove concurrency configuration",
-              option: [
-                ["-y, --assume-yes", "Skip confirmation prompt"],
-              ],
+              option: [["-y, --assume-yes", "Skip confirmation prompt"]],
             },
           },
         },
@@ -330,9 +331,7 @@ export default class ComponentAgentRun {
             $ s version publish
           `,
           summary: "Manage agent runtime versions",
-          option: [
-            ["--description <text>", "Description for the new version"],
-          ],
+          option: [["--description <text>", "Description for the new version"]],
         },
         subCommands: {
           list: {
@@ -363,9 +362,7 @@ export default class ComponentAgentRun {
                 $ s version publish
               `,
               summary: "Publish a new version",
-              option: [
-                ["--description <text>", "Version description"],
-              ],
+              option: [["--description <text>", "Version description"]],
             },
           },
         },
@@ -408,7 +405,10 @@ export default class ComponentAgentRun {
           summary: "Manage agent runtime endpoints",
           option: [
             ["--endpoint-name <name>", "Endpoint name"],
-            ["--target-version <number>", "Target version number (default: LATEST)"],
+            [
+              "--target-version <number>",
+              "Target version number (default: LATEST)",
+            ],
             ["--description <text>", "Endpoint description"],
             [
               "--weight <number>",
@@ -442,9 +442,7 @@ export default class ComponentAgentRun {
                 $ s endpoint get --endpoint-name staging
               `,
               summary: "Get endpoint details",
-              option: [
-                ["--endpoint-name <name>", "Endpoint name (required)"],
-              ],
+              option: [["--endpoint-name <name>", "Endpoint name (required)"]],
             },
           },
           publish: {
@@ -470,7 +468,10 @@ export default class ComponentAgentRun {
               summary: "Create or update endpoint",
               option: [
                 ["--endpoint-name <name>", "Endpoint name (required)"],
-                ["--target-version <number>", "Target version (default: LATEST)"],
+                [
+                  "--target-version <number>",
+                  "Target version (default: LATEST)",
+                ],
                 ["--description <text>", "Endpoint description"],
                 ["--weight <number>", "Traffic weight for canary (0.0-1.0)"],
               ],
@@ -663,9 +664,7 @@ export default class ComponentAgentRun {
 
   public async instance(inputs: IInputs): Promise<any> {
     GLogger.setLogger(this.logger);
-    GLogger.getLogger().debug(
-      `instance ==> input: ${JSON.stringify(inputs)}`,
-    );
+    GLogger.getLogger().debug(`instance ==> input: ${JSON.stringify(inputs)}`);
     const instance = new Instance(inputs);
     return await instance[instance.subCommand]();
   }
@@ -681,18 +680,14 @@ export default class ComponentAgentRun {
 
   public async version(inputs: IInputs): Promise<any> {
     GLogger.setLogger(this.logger);
-    GLogger.getLogger().debug(
-      `version ==> input: ${JSON.stringify(inputs)}`,
-    );
+    GLogger.getLogger().debug(`version ==> input: ${JSON.stringify(inputs)}`);
     const version = new Version(inputs);
     return await version[version.subCommand]();
   }
 
   public async endpoint(inputs: IInputs): Promise<any> {
     GLogger.setLogger(this.logger);
-    GLogger.getLogger().debug(
-      `endpoint ==> input: ${JSON.stringify(inputs)}`,
-    );
+    GLogger.getLogger().debug(`endpoint ==> input: ${JSON.stringify(inputs)}`);
     const endpoint = new Endpoint(inputs);
     return await endpoint[endpoint.subCommand]();
   }

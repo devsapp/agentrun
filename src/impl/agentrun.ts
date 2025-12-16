@@ -57,9 +57,9 @@ const createFC2Client = (
   }
 
   // ✅ 添加 https agent 配置
-  const https = require('https');
+  const https = require("https");
   const httpsAgent = new https.Agent({
-    rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
+    rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
     keepAlive: true,
   });
 
@@ -71,7 +71,7 @@ const createFC2Client = (
     endpoint,
     secure: true,
     timeout: FC_CLIENT_READ_TIMEOUT,
-    httpsAgent, 
+    httpsAgent,
   });
 };
 
@@ -148,13 +148,13 @@ export class AgentRun {
     }
 
     // 如果已经是完整的 ARN 格式，直接返回
-    if (role.startsWith('acs:ram::')) {
+    if (role.startsWith("acs:ram::")) {
       return role;
     }
 
     // 如果是简化格式，转换为完整 ARN
     const logger = GLogger.getLogger();
-    
+
     // 获取 AccountID（缓存以避免重复调用）
     if (!this.accountId) {
       const credential = await this.inputs.getCredential();
@@ -162,9 +162,9 @@ export class AgentRun {
     }
 
     const fullArn = `acs:ram::${this.accountId}:role/${role}`;
-    
+
     logger.debug(
-      `Converting simplified role name "${role}" to full ARN: ${fullArn}`
+      `Converting simplified role name "${role}" to full ARN: ${fullArn}`,
     );
 
     return fullArn;
@@ -293,16 +293,13 @@ export class AgentRun {
     // 处理健康检查配置
     if (config.healthCheckConfiguration) {
       normalized.healthCheckConfiguration = {
-        httpGetUrl:
-          config.healthCheckConfiguration.httpGetUrl || "/health",
+        httpGetUrl: config.healthCheckConfiguration.httpGetUrl || "/health",
         initialDelaySeconds:
           config.healthCheckConfiguration.initialDelaySeconds || 30,
         periodSeconds: config.healthCheckConfiguration.periodSeconds || 30,
         timeoutSeconds: config.healthCheckConfiguration.timeoutSeconds || 3,
-        failureThreshold:
-          config.healthCheckConfiguration.failureThreshold || 3,
-        successThreshold:
-          config.healthCheckConfiguration.successThreshold || 1,
+        failureThreshold: config.healthCheckConfiguration.failureThreshold || 3,
+        successThreshold: config.healthCheckConfiguration.successThreshold || 1,
       };
     }
 
@@ -312,7 +309,8 @@ export class AgentRun {
         const normalizedEp: any = {
           endpointName: ep.name,
           description: ep.description,
-          targetVersion: ep.version !== undefined ? String(ep.version) : "LATEST",
+          targetVersion:
+            ep.version !== undefined ? String(ep.version) : "LATEST",
         };
 
         if (ep.weight !== undefined) {
@@ -738,11 +736,11 @@ logConfig:
 
     createInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    
+
     // ✅ 在真正需要时才转换 role ARN
     if (this.agentRuntimeConfig.executionRoleArn) {
       createInput.executionRoleArn = await this.normalizeRoleArn(
-        this.agentRuntimeConfig.executionRoleArn
+        this.agentRuntimeConfig.executionRoleArn,
       );
     }
 
@@ -897,11 +895,11 @@ logConfig:
 
     updateInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
-    
+
     // ✅ 在真正需要时才转换 role ARN
     if (this.agentRuntimeConfig.executionRoleArn) {
       updateInput.executionRoleArn = await this.normalizeRoleArn(
-        this.agentRuntimeConfig.executionRoleArn
+        this.agentRuntimeConfig.executionRoleArn,
       );
     }
 

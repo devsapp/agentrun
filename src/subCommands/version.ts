@@ -70,12 +70,12 @@ export default class Version {
       }
 
       const versions = result.body?.data?.items || [];
-      this.logger.info(
-        chalk.green(`Found ${versions.length} version(s)\n`),
-      );
+      this.logger.info(chalk.green(`Found ${versions.length} version(s)\n`));
 
       if (versions.length === 0) {
-        this.logger.info("No versions found. Use 's version publish' to create one.");
+        this.logger.info(
+          "No versions found. Use 's version publish' to create one.",
+        );
         return [];
       }
 

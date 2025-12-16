@@ -40,7 +40,12 @@ export default class Endpoint {
     } = parseArgv(inputs.args, {
       alias: { "assume-yes": "y" },
       boolean: ["y"],
-      string: ["endpoint-name", "target-version", "canary-version", "description"],
+      string: [
+        "endpoint-name",
+        "target-version",
+        "canary-version",
+        "description",
+      ],
       number: ["weight"],
     });
 
@@ -64,22 +69,22 @@ export default class Endpoint {
     if (this.weight !== undefined && !this.canaryVersion) {
       throw new Error(
         "--canary-version is required when --weight is specified. " +
-        "Example: --target-version 2 --canary-version 1 --weight 0.2 " +
-        "(80% traffic to v2, 20% to v1)"
+          "Example: --target-version 2 --canary-version 1 --weight 0.2 " +
+          "(80% traffic to v2, 20% to v1)",
       );
     }
 
     if (this.canaryVersion && this.weight === undefined) {
       throw new Error(
         "--weight is required when --canary-version is specified. " +
-        "Specify a value between 0.0 and 1.0"
+          "Specify a value between 0.0 and 1.0",
       );
     }
 
     this.logger.debug(
       `Endpoint constructor: subCommand=${this.subCommand}, ` +
-      `endpointName=${this.endpointName}, targetVersion=${this.targetVersion}, ` +
-      `canaryVersion=${this.canaryVersion}, weight=${this.weight}`,
+        `endpointName=${this.endpointName}, targetVersion=${this.targetVersion}, ` +
+        `canaryVersion=${this.canaryVersion}, weight=${this.weight}`,
     );
   }
 
@@ -111,25 +116,27 @@ export default class Endpoint {
       }
 
       const endpoints = result.body?.data?.items || [];
-      this.logger.info(
-        chalk.green(`Found ${endpoints.length} endpoint(s)\n`),
-      );
+      this.logger.info(chalk.green(`Found ${endpoints.length} endpoint(s)\n`));
 
       if (endpoints.length === 0) {
-        this.logger.info("No endpoints found. Use 's endpoint publish' to create one.");
+        this.logger.info(
+          "No endpoints found. Use 's endpoint publish' to create one.",
+        );
         return [];
       }
 
       const formattedEndpoints = endpoints.map((ep: any) => {
         const weights = ep.routingConfiguration?.versionWeights || [];
-        let trafficInfo = `100% → ${ep.targetVersion || 'LATEST'}`;
-        
+        let trafficInfo = `100% → ${ep.targetVersion || "LATEST"}`;
+
         if (weights.length > 0) {
           const canaryInfo = weights
             .map((w: any) => `${(w.weight * 100).toFixed(0)}% → v${w.version}`)
             .join(", ");
-          const mainPercent = 100 - weights.reduce((sum: number, w: any) => sum + (w.weight * 100), 0);
-          trafficInfo = `${mainPercent.toFixed(0)}% → ${ep.targetVersion || 'LATEST'}, ${canaryInfo}`;
+          const mainPercent =
+            100 -
+            weights.reduce((sum: number, w: any) => sum + w.weight * 100, 0);
+          trafficInfo = `${mainPercent.toFixed(0)}% → ${ep.targetVersion || "LATEST"}, ${canaryInfo}`;
         }
 
         return {
@@ -174,14 +181,15 @@ export default class Endpoint {
     this.logger.info(chalk.green(`✅ Endpoint details:\n`));
 
     // ✅ 格式化流量分配信息
-    let trafficInfo = `100% → ${endpoint.targetVersion || 'LATEST'}`;
+    let trafficInfo = `100% → ${endpoint.targetVersion || "LATEST"}`;
     const weights = endpoint.routingConfiguration?.versionWeights || [];
     if (weights.length > 0) {
       const canaryInfo = weights
         .map((w: any) => `${(w.weight * 100).toFixed(0)}% → v${w.version}`)
         .join(", ");
-      const mainPercent = 100 - weights.reduce((sum: number, w: any) => sum + (w.weight * 100), 0);
-      trafficInfo = `${mainPercent.toFixed(0)}% → ${endpoint.targetVersion || 'LATEST'}, ${canaryInfo}`;
+      const mainPercent =
+        100 - weights.reduce((sum: number, w: any) => sum + w.weight * 100, 0);
+      trafficInfo = `${mainPercent.toFixed(0)}% → ${endpoint.targetVersion || "LATEST"}, ${canaryInfo}`;
     }
 
     const output = {
@@ -338,9 +346,9 @@ export default class Endpoint {
 
       this.logger.info(
         chalk.yellow(
-          `Traffic split: ${((1 - this.weight) * 100).toFixed(0)}% → v${this.targetVersion || 'LATEST'}, ` +
-          `${(this.weight * 100).toFixed(0)}% → v${this.canaryVersion}`
-        )
+          `Traffic split: ${((1 - this.weight) * 100).toFixed(0)}% → v${this.targetVersion || "LATEST"}, ` +
+            `${(this.weight * 100).toFixed(0)}% → v${this.canaryVersion}`,
+        ),
       );
     }
 
@@ -368,9 +376,7 @@ export default class Endpoint {
 
       const endpointData = result.body?.data;
       this.logger.info(
-        chalk.green(
-          `✅ Endpoint ${this.endpointName} created successfully\n`,
-        ),
+        chalk.green(`✅ Endpoint ${this.endpointName} created successfully\n`),
       );
 
       const output = {
@@ -409,9 +415,9 @@ export default class Endpoint {
 
       this.logger.info(
         chalk.yellow(
-          `Traffic split: ${((1 - this.weight) * 100).toFixed(0)}% → v${this.targetVersion || 'LATEST'}, ` +
-          `${(this.weight * 100).toFixed(0)}% → v${this.canaryVersion}`
-        )
+          `Traffic split: ${((1 - this.weight) * 100).toFixed(0)}% → v${this.targetVersion || "LATEST"}, ` +
+            `${(this.weight * 100).toFixed(0)}% → v${this.canaryVersion}`,
+        ),
       );
     }
 
@@ -440,9 +446,7 @@ export default class Endpoint {
 
       const endpointData = result.body?.data;
       this.logger.info(
-        chalk.green(
-          `✅ Endpoint ${this.endpointName} updated successfully\n`,
-        ),
+        chalk.green(`✅ Endpoint ${this.endpointName} updated successfully\n`),
       );
 
       const output = {
