@@ -48,7 +48,7 @@
                 "nodejs20",
                 "java8",
                 "java11",
-                "custom"
+                "java17"
               ]
             },
             "command": {
