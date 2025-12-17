@@ -128,8 +128,13 @@ export class AgentRun {
       throw new Error("agent configuration is required");
     }
 
-    // 使用旧版本的同步配置转换（保持与旧代码一致）
-    this.agentRuntimeConfig = this.normalizeAgentConfig(agentConfig);
+    if (action === "remove") {
+      this.agentRuntimeConfig = {
+        agentRuntimeName: agentConfig.name,
+      } as AgentRuntimeConfig;
+    } else {
+      this.agentRuntimeConfig = this.normalizeAgentConfig(agentConfig);
+    }
     this.assumeYes = this.opts.y;
 
     GLogger.getLogger().debug(
