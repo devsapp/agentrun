@@ -4,7 +4,7 @@ import path from "path";
 // AgentRun uses standard Alibaba Cloud endpoint format: agentrun.{region}.aliyuncs.com
 export const agentRunRegionEndpoints: Map<string, string> = new Map([
   ["cn-beijing", "agentrun.cn-beijing.aliyuncs.com"],
-  ["cn-hangzhou", "agentrun.cn-hangzhou.aliyuncs.com"],
+  ["cn-hangzhou", "agentrun-pre.cn-hangzhou.aliyuncs.com"],
   ["cn-shanghai", "agentrun.cn-shanghai.aliyuncs.com"],
   ["cn-zhangjiakou", "agentrun.cn-zhangjiakou.aliyuncs.com"],
   ["cn-shenzhen", "agentrun.cn-shenzhen.aliyuncs.com"],

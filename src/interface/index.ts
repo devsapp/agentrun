@@ -34,6 +34,7 @@ export interface AgentConfig {
   // 资源配置
   cpu?: number; // CPU 核数，默认 1.0
   memory?: number; // 内存 MB，默认 2048
+  diskSize?: number; // 磁盘大小 MB，默认 512
 
   // 端口和并发
   port?: number; // 端口号，默认 8000
@@ -209,6 +210,7 @@ export interface AgentRuntimeConfig {
   containerConfiguration?: ContainerConfiguration;
   cpu?: number;
   memory?: number;
+  diskSize?: number;
   port?: number;
   sessionConcurrencyLimitPerInstance?: number;
   sessionIdleTimeoutSeconds?: number;

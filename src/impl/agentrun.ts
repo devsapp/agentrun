@@ -187,6 +187,7 @@ export class AgentRun {
       description: config.description,
       cpu: config.cpu,
       memory: config.memory,
+      diskSize: config.diskSize,
       port: config.port,
       sessionConcurrencyLimitPerInstance: config.instanceConcurrency,
       sessionIdleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
@@ -658,6 +659,7 @@ logConfig:
     createInput.artifactType = this.agentRuntimeConfig.artifactType;
     createInput.cpu = this.agentRuntimeConfig.cpu;
     createInput.memory = this.agentRuntimeConfig.memory;
+    createInput.diskSize = this.agentRuntimeConfig.diskSize;
     createInput.port = this.agentRuntimeConfig.port;
 
     if (
@@ -816,6 +818,7 @@ logConfig:
     updateInput.description = this.agentRuntimeConfig.description;
     updateInput.cpu = this.agentRuntimeConfig.cpu;
     updateInput.memory = this.agentRuntimeConfig.memory;
+    updateInput.diskSize = this.agentRuntimeConfig.diskSize;
     updateInput.port = this.agentRuntimeConfig.port;
     updateInput.artifactType = this.agentRuntimeConfig.artifactType;
 
@@ -1220,6 +1223,7 @@ logConfig:
       resources: {
         cpu: runtime.cpu || 0,
         memory: runtime.memory || 0,
+        diskSize: runtime.diskSize || 0,
         port: runtime.port || 0,
       },
       timestamps: {

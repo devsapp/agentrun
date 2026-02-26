@@ -129,6 +129,12 @@
           "minimum": 128,
           "maximum": 32768
         },
+        "diskSize": {
+          "type": "number",
+          "description": "Disk size in MB",
+          "default": 512,
+          "enum": [512, 10240]
+        },
         "port": {
           "type": "number",
           "description": "Port number for the agent runtime service",

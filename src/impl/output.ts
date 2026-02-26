@@ -10,6 +10,7 @@ export class AgentRuntimeOutput {
     resources: {
       cpu: number;
       memory: number;
+      diskSize: number;
       port: number;
     };
     timestamps: {
