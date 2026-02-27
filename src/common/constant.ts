@@ -14,6 +14,8 @@ export const agentRunRegionEndpoints: Map<string, string> = new Map([
   ["eu-west-1", "agentrun.eu-west-1.aliyuncs.com"],
 ]);
 
+export const FC3_DOMAIN_COMPONENT_NAME = "fc3-domain";
+
 export const SCHEMA_FILE_PATH = path.resolve(__dirname, "./schema.json");
 export const SCHEMA_FILE_PATH_DELETE = path.resolve(
   __dirname,

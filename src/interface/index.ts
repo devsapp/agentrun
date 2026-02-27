@@ -34,6 +34,7 @@ export interface AgentConfig {
   // 资源配置
   cpu?: number; // CPU 核数，默认 1.0
   memory?: number; // 内存 MB，默认 2048
+  diskSize?: number; // 磁盘大小 MB，默认 512
 
   // 端口和并发
   port?: number; // 端口号，默认 8000
@@ -64,6 +65,9 @@ export interface AgentConfig {
 
   // 端点配置
   endpoints?: EndpointConfig[];
+
+  // 自定义域名配置
+  customDomain?: CustomDomainConfig;
 }
 
 // 代码配置（必须是对象，包含 src 或 OSS 配置）
@@ -134,6 +138,21 @@ export interface EndpointConfig {
   version?: number | string; // 支持数字或 "LATEST"
   description?: string;
   weight?: number; // 灰度流量权重 (0.0-1.0)
+}
+
+// 自定义域名配置
+export interface CustomDomainConfig {
+  domainName: string; // "auto" 表示自动生成
+  protocol?: string;
+  route?: {
+    path?: string;
+    qualifier?: string;
+    methods?: string[];
+  };
+  certConfig?: { [key: string]: any };
+  tlsConfig?: { [key: string]: any };
+  authConfig?: { [key: string]: any };
+  wafConfig?: { [key: string]: any };
 }
 
 // ============= 凭证配置 =============
@@ -209,6 +228,7 @@ export interface AgentRuntimeConfig {
   containerConfiguration?: ContainerConfiguration;
   cpu?: number;
   memory?: number;
+  diskSize?: number;
   port?: number;
   sessionConcurrencyLimitPerInstance?: number;
   sessionIdleTimeoutSeconds?: number;

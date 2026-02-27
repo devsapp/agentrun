@@ -1,4 +1,9 @@
 import { IInputs, AgentRuntimeConfig } from "../interface/index";
+import {
+  deployCustomDomain,
+  removeCustomDomain,
+  infoCustomDomain,
+} from "./custom_domain";
 import * as $OpenApi from "@alicloud/openapi-client";
 import { parseArgv, getRootHome } from "@serverless-devs/utils";
 import * as _ from "lodash";
@@ -187,6 +192,7 @@ export class AgentRun {
       description: config.description,
       cpu: config.cpu,
       memory: config.memory,
+      diskSize: config.diskSize,
       port: config.port,
       sessionConcurrencyLimitPerInstance: config.instanceConcurrency,
       sessionIdleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
@@ -603,13 +609,34 @@ logConfig:
       await this.waitForEndpointsReady(runtimeId);
     }
 
+    // 处理自定义域名
+    const customDomainConfig = this.inputs.props.agent?.customDomain;
+    let customDomainResult: any;
+    if (customDomainConfig) {
+      const functionName = `agentrun-${runtimeId}`;
+      logger.info(`deploying custom domain for function: ${functionName}...`);
+      try {
+        customDomainResult = await deployCustomDomain(
+          this.inputs,
+          customDomainConfig,
+          this.region,
+          functionName,
+          logger,
+        );
+        logger.info(chalk.green("Custom domain deployed successfully."));
+      } catch (e) {
+        logger.error(`Failed to deploy custom domain: ${e.message}`);
+        throw e;
+      }
+    }
+
     logger.info(
       chalk.green(
         `Agent runtime ${this.agentRuntimeConfig.agentRuntimeName} deployed successfully.`,
       ),
     );
 
-    return this.getOutputs(runtimeId);
+    return this.getOutputs(runtimeId, customDomainResult);
   }
 
   private async findAgentRuntimeByName(): Promise<string> {
@@ -658,6 +685,7 @@ logConfig:
     createInput.artifactType = this.agentRuntimeConfig.artifactType;
     createInput.cpu = this.agentRuntimeConfig.cpu;
     createInput.memory = this.agentRuntimeConfig.memory;
+    createInput.diskSize = this.agentRuntimeConfig.diskSize;
     createInput.port = this.agentRuntimeConfig.port;
 
     if (
@@ -816,6 +844,7 @@ logConfig:
     updateInput.description = this.agentRuntimeConfig.description;
     updateInput.cpu = this.agentRuntimeConfig.cpu;
     updateInput.memory = this.agentRuntimeConfig.memory;
+    updateInput.diskSize = this.agentRuntimeConfig.diskSize;
     updateInput.port = this.agentRuntimeConfig.port;
     updateInput.artifactType = this.agentRuntimeConfig.artifactType;
 
@@ -1113,6 +1142,26 @@ logConfig:
       return;
     }
 
+    // 先移除自定义域名路由
+    const customDomainConfig = this.inputs.props.agent?.customDomain;
+    if (customDomainConfig) {
+      const functionName = `agentrun-${runtimeId}`;
+      logger.info(
+        `removing custom domain route for function: ${functionName}...`,
+      );
+      try {
+        await removeCustomDomain(
+          this.inputs,
+          customDomainConfig,
+          this.region,
+          functionName,
+          logger,
+        );
+      } catch (e) {
+        logger.warn(`failed to remove custom domain: ${e.message}`);
+      }
+    }
+
     const endpoints = await this.listEndpoints(runtimeId);
     if (endpoints && endpoints.length > 0) {
       logger.info(`found ${endpoints.length} endpoint(s), deleting...`);
@@ -1172,7 +1221,10 @@ logConfig:
     return await this.getOutputs(runtimeId);
   }
 
-  private async getOutputs(runtimeId: string): Promise<AgentRuntimeOutput> {
+  private async getOutputs(
+    runtimeId: string,
+    customDomainResult?: any,
+  ): Promise<AgentRuntimeOutput> {
     const result = new AgentRuntimeOutput();
     const getRequest = new GetAgentRuntimeRequest({});
     const resp = await this.agentRuntimeClient.getAgentRuntime(
@@ -1209,6 +1261,32 @@ logConfig:
         : undefined,
     }));
 
+    // 获取自定义域名信息
+    let customDomainOutput:
+      | { domainName: string; protocol: string }
+      | undefined;
+    const customDomainConfig = this.inputs.props.agent?.customDomain;
+    if (customDomainResult) {
+      customDomainOutput = {
+        domainName: customDomainResult.domainName || "",
+        protocol: customDomainResult.protocol || "",
+      };
+    } else if (customDomainConfig) {
+      const functionName = `agentrun-${runtimeId}`;
+      const domainInfo = await infoCustomDomain(
+        this.inputs,
+        customDomainConfig,
+        this.region,
+        functionName,
+      );
+      if (domainInfo) {
+        customDomainOutput = {
+          domainName: domainInfo.domainName || "",
+          protocol: domainInfo.protocol || "",
+        };
+      }
+    }
+
     result.agent = {
       id: runtime.agentRuntimeId || "",
       arn: runtime.agentRuntimeArn || "",
@@ -1220,6 +1298,7 @@ logConfig:
       resources: {
         cpu: runtime.cpu || 0,
         memory: runtime.memory || 0,
+        diskSize: runtime.diskSize || 0,
         port: runtime.port || 0,
       },
       timestamps: {
@@ -1228,6 +1307,7 @@ logConfig:
       },
       region: this.region,
       endpoints: endpointsOutput,
+      customDomain: customDomainOutput,
     };
 
     return result;
