@@ -33,5 +33,9 @@ export class AgentRuntimeOutput {
         }>;
       };
     }>;
+    customDomain?: {
+      domainName: string;
+      protocol: string;
+    };
   };
 }

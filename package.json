@@ -1,6 +1,6 @@
 {
   "name": "AgentRunComponent",
-  "version": "dev.0.11",
+  "version": "1.0.4",
   "description": "This is agentrun component for Serverless Devs Tool",
   "autoInstall": false,
   "homepage": "https://www.serverless-devs.com",
@@ -31,7 +31,7 @@
     "publish": "npm i && npm run build && s registry publish"
   },
   "dependencies": {
-    "@alicloud/agentrun20250910": "file:./agentrun-20250910",
+    "@alicloud/agentrun20250910": "^5.3.9",
     "@alicloud/openapi-client": "^0.4.9",
     "@alicloud/tea-typescript": "^1.8.0",
     "@alicloud/tea-util": "^1.4.8",
