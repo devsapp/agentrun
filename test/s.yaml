@@ -32,9 +32,22 @@ resources:
         # logConfig:
         #   project: your-sls-project
         #   logstore: your-sls-logstore
+        nasConfig:
+          userId: 10003
+          groupId: 10003
+          mountPoints:
+            - serverAddr: "xxx-xxx.cn-hangzhou.nas.aliyuncs.com:/"
+              mountDir: /mnt/nas
+              enableTLS: true
         endpoints:
           - name: production
             description: Production endpoint
           - name: staging
             version: LATEST
             description: Staging endpoint
+        customDomain:
+          protocol: "HTTP"
+          route:
+            path: "/*"
+            qualifier: "LATEST"
+          domainName: auto
