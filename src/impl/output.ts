@@ -37,5 +37,6 @@ export class AgentRuntimeOutput {
       domainName: string;
       protocol: string;
     };
+    workspaceId?: string;
   };
 }
