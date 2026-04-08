@@ -1,14 +1,15 @@
 edition: 3.0.0
 name: agentrun-app
-access: 'default'
+access: 'quanxi'
 
 resources:
   agentRuntime_example:
-    component: ./../dist
+    # component: agentrun@dev
+    component: ${path('../')}
     props:
       region: cn-hangzhou
       agent:
-        name: my-agent-code
+        name: test
         description: "Code-based Agent Runtime"
         
         code:
@@ -28,6 +29,12 @@ resources:
           ENV: production
         
         logConfig: auto
+        
+        workspace: 
+          name: test
+          # id: xxxxx
+          # description: test
+          # resourceGroupId: 
         
         endpoints:
           - name: production

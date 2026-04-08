@@ -53,3 +53,4 @@ download
 
 dist
 replace-committers.sh
+package-lock.json

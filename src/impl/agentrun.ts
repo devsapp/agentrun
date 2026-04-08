@@ -1,4 +1,8 @@
-import { IInputs, AgentRuntimeConfig } from "../interface/index";
+import {
+  IInputs,
+  AgentRuntimeConfig,
+  WorkspaceConfig,
+} from "../interface/index";
 import {
   deployCustomDomain,
   removeCustomDomain,
@@ -32,6 +36,9 @@ import Client, {
   ListAgentRuntimesRequest,
   GetAgentRuntimeRequest,
   ListAgentRuntimeEndpointsRequest,
+  ListWorkspacesRequest,
+  CreateWorkspaceRequest,
+  CreateWorkspaceInput,
 } from "@alicloud/agentrun20250910";
 import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
@@ -105,6 +112,7 @@ export class AgentRun {
   agentRuntimeClient: Client;
   assumeYes: boolean = false;
   autolog: boolean = false;
+  workspace: WorkspaceConfig;
   private fc2Client?: FC2;
   private accountId?: string; // 缓存 AccountID，用于 role ARN 转换
 
@@ -134,7 +142,7 @@ export class AgentRun {
     if (!agentConfig) {
       throw new Error("agent configuration is required");
     }
-
+    this.workspace = agentConfig.workspace;
     if (action === "remove") {
       this.agentRuntimeConfig = {
         agentRuntimeName: agentConfig.name,
@@ -597,6 +605,11 @@ logConfig:
       };
     }
 
+    let workspaceId: string;
+    if (!_.isEmpty(this.workspace)) {
+      workspaceId = await this.getWorkspace();
+    }
+
     logger.info(
       `finding agent runtime with name: ${this.agentRuntimeConfig.agentRuntimeName}`,
     );
@@ -605,12 +618,12 @@ logConfig:
       logger.info(
         `agent runtime[name=${this.agentRuntimeConfig.agentRuntimeName}, region=${this.region}] not found, creating...`,
       );
-      runtimeId = await this.createAgentRuntime();
+      runtimeId = await this.createAgentRuntime({ workspaceId });
     } else {
       logger.info(
         `agent runtime[name=${this.agentRuntimeConfig.agentRuntimeName}, region=${this.region}] found, updating...`,
       );
-      await this.updateAgentRuntime(runtimeId);
+      await this.updateAgentRuntime(runtimeId, workspaceId);
     }
     logger.info(`using agent runtime: ${runtimeId}`);
     this.agentRuntimeId = runtimeId;
@@ -697,7 +710,11 @@ logConfig:
     }
   }
 
-  private async createAgentRuntime(): Promise<string> {
+  private async createAgentRuntime({
+    workspaceId,
+  }: {
+    workspaceId?: string;
+  }): Promise<string> {
     const logger = GLogger.getLogger();
     const createInput = new CreateAgentRuntimeInput();
 
@@ -708,6 +725,7 @@ logConfig:
     createInput.memory = this.agentRuntimeConfig.memory;
     createInput.diskSize = this.agentRuntimeConfig.diskSize;
     createInput.port = this.agentRuntimeConfig.port;
+    createInput.workspaceId = workspaceId;
 
     if (
       this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance !== undefined
@@ -878,7 +896,10 @@ logConfig:
     return runtimeId;
   }
 
-  private async updateAgentRuntime(runtimeId: string): Promise<void> {
+  private async updateAgentRuntime(
+    runtimeId: string,
+    workspaceId?: string,
+  ): Promise<void> {
     const logger = GLogger.getLogger();
     const updateInput = new UpdateAgentRuntimeInput();
 
@@ -888,6 +909,7 @@ logConfig:
     updateInput.diskSize = this.agentRuntimeConfig.diskSize;
     updateInput.port = this.agentRuntimeConfig.port;
     updateInput.artifactType = this.agentRuntimeConfig.artifactType;
+    updateInput.workspaceId = workspaceId;
 
     if (
       this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance !== undefined
@@ -1187,6 +1209,61 @@ logConfig:
     }
   }
 
+  async getWorkspace() {
+    const logger = GLogger.getLogger();
+    let workspaceId: string;
+    const { id, name, resourceGroupId, description } = this.workspace;
+    if (!id && !name) {
+      throw new Error(
+        "Please check whether the workspaceId is configured correctly, or whether the workspace is configured",
+      );
+    }
+    let isCreateWorkspace = true;
+    if (id) {
+      await this.agentRuntimeClient.getWorkspace(id);
+      isCreateWorkspace = false;
+      workspaceId = id;
+    } else {
+      const workspaceList = await this.agentRuntimeClient.listWorkspaces(
+        new ListWorkspacesRequest({
+          name,
+        }),
+      );
+      logger.debug(`Workspace list: ${JSON.stringify(workspaceList, null, 2)}`);
+      if (!_.isEmpty(workspaceList.body.data.workspaces)) {
+        workspaceList.body.data.workspaces.forEach((workspace) => {
+          if (workspace.name === name) {
+            workspaceId = workspace.workspaceId;
+            isCreateWorkspace = false;
+          }
+        });
+      }
+    }
+
+    if (isCreateWorkspace) {
+      logger.info(
+        `Create a new workspace`,
+        JSON.stringify(this.workspace.name),
+      );
+      const result = await this.agentRuntimeClient.createWorkspace(
+        new CreateWorkspaceRequest({
+          body: new CreateWorkspaceInput({
+            name,
+            description,
+            resourceGroupId,
+          }),
+        }),
+      );
+      logger.debug(
+        "Create workspace result: ",
+        JSON.stringify(result, null, 2),
+      );
+      workspaceId = result.body.data.workspaceId;
+    }
+
+    return workspaceId;
+  }
+
   async remove() {
     await this.initClient("remove");
     const logger = GLogger.getLogger();
@@ -1369,6 +1446,7 @@ logConfig:
       region: this.region,
       endpoints: endpointsOutput,
       customDomain: customDomainOutput,
+      workspaceId: runtime.workspaceId,
     };
 
     return result;

@@ -19,6 +19,13 @@ export interface IInputs extends _IInputs {
   };
 }
 
+export interface WorkspaceConfig {
+  name?: string;
+  description?: string;
+  resourceGroupId?: string;
+  id?: string;
+}
+
 // ============= 智能体配置 =============
 export interface AgentConfig {
   // 基本信息
@@ -71,6 +78,9 @@ export interface AgentConfig {
 
   // 自定义域名配置
   customDomain?: CustomDomainConfig;
+
+  // 工作空间配置
+  workspace?: WorkspaceConfig;
 }
 
 // 代码配置（必须是对象，包含 src 或 OSS 配置）
