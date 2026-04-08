@@ -25,6 +25,8 @@ import Client, {
   LogConfiguration,
   ProtocolConfiguration,
   HealthCheckConfiguration,
+  NASConfig,
+  NASMountConfig,
   RoutingConfiguration,
   VersionWeight,
   ListAgentRuntimesRequest,
@@ -280,6 +282,25 @@ export class AgentRun {
         normalized.networkConfiguration.networkMode =
           config.internetAccess !== false ? "PUBLIC" : "PRIVATE";
       }
+    }
+
+    // 处理 NAS 配置
+    if (config.nasConfig) {
+      if (!config.vpcConfig) {
+        throw new Error(
+          "nasConfig requires vpcConfig to be configured, NAS must be accessed through VPC network",
+        );
+      }
+
+      normalized.nasConfig = {
+        userId: config.nasConfig.userId,
+        groupId: config.nasConfig.groupId,
+        mountPoints: (config.nasConfig.mountPoints || []).map((mp: any) => ({
+          serverAddr: mp.serverAddr,
+          mountDir: mp.mountDir,
+          enableTLS: mp.enableTLS,
+        })),
+      };
     }
 
     // 处理日志配置
@@ -767,6 +788,26 @@ logConfig:
       createInput.networkConfiguration = networkConfig;
     }
 
+    // 处理 NAS 配置
+    if (this.agentRuntimeConfig.nasConfig) {
+      const nasConfig = new NASConfig();
+      nasConfig.userId = this.agentRuntimeConfig.nasConfig.userId;
+      nasConfig.groupId = this.agentRuntimeConfig.nasConfig.groupId;
+      if (this.agentRuntimeConfig.nasConfig.mountPoints) {
+        nasConfig.mountPoints =
+          this.agentRuntimeConfig.nasConfig.mountPoints.map((mp) => {
+            const mountConfig = new NASMountConfig();
+            mountConfig.serverAddr = mp.serverAddr;
+            mountConfig.mountDir = mp.mountDir;
+            if (mp.enableTLS !== undefined) {
+              mountConfig.enableTLS = mp.enableTLS;
+            }
+            return mountConfig;
+          });
+      }
+      createInput.nasConfig = nasConfig;
+    }
+
     createInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
 
@@ -925,6 +966,26 @@ logConfig:
       networkConfig.securityGroupId =
         this.agentRuntimeConfig.networkConfiguration.securityGroupId;
       updateInput.networkConfiguration = networkConfig;
+    }
+
+    // 处理 NAS 配置
+    if (this.agentRuntimeConfig.nasConfig) {
+      const nasConfig = new NASConfig();
+      nasConfig.userId = this.agentRuntimeConfig.nasConfig.userId;
+      nasConfig.groupId = this.agentRuntimeConfig.nasConfig.groupId;
+      if (this.agentRuntimeConfig.nasConfig.mountPoints) {
+        nasConfig.mountPoints =
+          this.agentRuntimeConfig.nasConfig.mountPoints.map((mp) => {
+            const mountConfig = new NASMountConfig();
+            mountConfig.serverAddr = mp.serverAddr;
+            mountConfig.mountDir = mp.mountDir;
+            if (mp.enableTLS !== undefined) {
+              mountConfig.enableTLS = mp.enableTLS;
+            }
+            return mountConfig;
+          });
+      }
+      updateInput.nasConfig = nasConfig;
     }
 
     updateInput.environmentVariables =

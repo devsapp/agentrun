@@ -196,6 +196,46 @@
           "description": "Allow internet access",
           "default": true
         },
+        "nasConfig": {
+          "type": "object",
+          "description": "NAS file storage mount configuration",
+          "properties": {
+            "userId": {
+              "type": "number",
+              "description": "NAS user ID for file access permissions"
+            },
+            "groupId": {
+              "type": "number",
+              "description": "NAS user group ID for file access permissions"
+            },
+            "mountPoints": {
+              "type": "array",
+              "description": "NAS mount point configurations",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "serverAddr": {
+                    "type": "string",
+                    "description": "NAS server address, e.g. xxx-xxx.cn-hangzhou.nas.aliyuncs.com:/"
+                  },
+                  "mountDir": {
+                    "type": "string",
+                    "description": "Mount directory inside the container, e.g. /mnt/nas"
+                  },
+                  "enableTLS": {
+                    "type": "boolean",
+                    "description": "Whether to enable TLS encrypted transport"
+                  }
+                },
+                "required": ["serverAddr", "mountDir"],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["mountPoints"],
+          "additionalProperties": false
+        },
         "environmentVariables": {
           "type": "object",
           "description": "Environment variables",

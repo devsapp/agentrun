@@ -47,6 +47,9 @@ export interface AgentConfig {
   vpcConfig?: VpcConfig; // VPC 配置
   internetAccess?: boolean; // 是否允许公网访问
 
+  // NAS 文件存储配置
+  nasConfig?: NasConfig;
+
   // 环境变量
   environmentVariables?: { [key: string]: string };
 
@@ -109,6 +112,19 @@ export interface VpcConfig {
   vpcId: string;
   vSwitchIds: string | string[]; // 支持单个或多个交换机
   securityGroupId: string;
+}
+
+// NAS 文件存储配置
+export interface NasConfig {
+  userId?: number;
+  groupId?: number;
+  mountPoints: NasMountPointConfig[];
+}
+
+export interface NasMountPointConfig {
+  serverAddr: string;
+  mountDir: string;
+  enableTLS?: boolean;
 }
 
 // 日志配置
@@ -233,6 +249,7 @@ export interface AgentRuntimeConfig {
   sessionConcurrencyLimitPerInstance?: number;
   sessionIdleTimeoutSeconds?: number;
   networkConfiguration?: NetworkConfiguration;
+  nasConfig?: NasConfigInternal;
   environmentVariables?: { [key: string]: string };
   executionRoleArn?: string;
   credentialName?: string;
@@ -263,6 +280,18 @@ export interface NetworkConfiguration {
   vpcId?: string;
   vswitchIds?: string[]; // ✅ 改为复数数组
   securityGroupId?: string;
+}
+
+export interface NasConfigInternal {
+  userId?: number;
+  groupId?: number;
+  mountPoints?: NasMountPointInternal[];
+}
+
+export interface NasMountPointInternal {
+  serverAddr?: string;
+  mountDir?: string;
+  enableTLS?: boolean;
 }
 
 export interface LogConfiguration {
