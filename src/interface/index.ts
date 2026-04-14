@@ -1,3 +1,4 @@
+import { ArmsConfiguration } from "@alicloud/agentrun20250910";
 import { IInputs as _IInputs } from "@serverless-devs/component-interface";
 
 export interface IInputs extends _IInputs {
@@ -81,6 +82,9 @@ export interface AgentConfig {
 
   // 工作空间配置
   workspace?: WorkspaceConfig;
+
+  // 阿里云arms配置
+  armsConfiguration?: ArmsConfiguration;
 }
 
 // 代码配置（必须是对象，包含 src 或 OSS 配置）
@@ -267,6 +271,7 @@ export interface AgentRuntimeConfig {
   protocolConfiguration?: ProtocolConfiguration;
   healthCheckConfiguration?: HealthCheckConfiguration;
   endpoints?: EndpointConfigInternal[];
+  armsConfiguration?: ArmsConfiguration;
 }
 
 export interface CodeConfiguration {
