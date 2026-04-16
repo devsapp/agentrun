@@ -35,6 +35,10 @@ resources:
           # id: xxxxx
           # description: test
           # resourceGroupId: 
+
+        armsConfiguration:
+          enableArms: false
+        #   armsLicenseKey: 
         
         endpoints:
           - name: production

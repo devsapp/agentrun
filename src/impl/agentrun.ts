@@ -39,6 +39,10 @@ import Client, {
   ListWorkspacesRequest,
   CreateWorkspaceRequest,
   CreateWorkspaceInput,
+  ArmsConfiguration,
+  GetWorkspaceRequest,
+  DeleteAgentRuntimeEndpointRequest,
+  DeleteAgentRuntimeRequest,
 } from "@alicloud/agentrun20250910";
 import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
@@ -53,6 +57,7 @@ import axios from "axios";
 import fs from "fs";
 import zip from "@serverless-devs/zip";
 import Sls from "./sls";
+import Arms from "./arms";
 
 // 常量定义
 const FC_CLIENT_READ_TIMEOUT = 60000;
@@ -209,6 +214,7 @@ export class AgentRun {
       environmentVariables: config.environmentVariables,
       executionRoleArn: config.role, // 保存原始值，稍后在需要时转换
       credentialName: config.credentialName,
+      armsConfiguration: config.armsConfiguration,
     };
 
     // 处理代码配置
@@ -366,6 +372,23 @@ export class AgentRun {
 
     logger.debug(`Normalized config: ${JSON.stringify(normalized, null, 2)}`);
     return normalized as AgentRuntimeConfig;
+  }
+
+  private async normalizeArmsLicenseKey(): Promise<ArmsConfiguration> {
+    const { armsLicenseKey: localArmsLicenseKey } =
+      this.agentRuntimeConfig.armsConfiguration;
+    let resolvedArmsLicenseKey: string;
+    if (!localArmsLicenseKey) {
+      const credentials = await this.inputs.getCredential();
+      const armsClient = new Arms(this.region, credentials);
+      resolvedArmsLicenseKey = await armsClient.DescribeTraceLicenseKey();
+    } else {
+      resolvedArmsLicenseKey = localArmsLicenseKey;
+    }
+    return new ArmsConfiguration({
+      ...this.agentRuntimeConfig.armsConfiguration,
+      armsLicenseKey: resolvedArmsLicenseKey,
+    });
   }
 
   private async initClient(command: string) {
@@ -727,6 +750,13 @@ logConfig:
     createInput.port = this.agentRuntimeConfig.port;
     createInput.workspaceId = workspaceId;
 
+    if (!_.isEmpty(this.agentRuntimeConfig.armsConfiguration)) {
+      logger.debug(
+        `Arms configuration: ${JSON.stringify(this.agentRuntimeConfig.armsConfiguration)}`,
+      );
+      createInput.armsConfiguration = await this.normalizeArmsLicenseKey();
+    }
+
     if (
       this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance !== undefined
     ) {
@@ -910,6 +940,13 @@ logConfig:
     updateInput.port = this.agentRuntimeConfig.port;
     updateInput.artifactType = this.agentRuntimeConfig.artifactType;
     updateInput.workspaceId = workspaceId;
+
+    if (!_.isEmpty(this.agentRuntimeConfig.armsConfiguration)) {
+      logger.debug(
+        `Arms configuration: ${JSON.stringify(this.agentRuntimeConfig.armsConfiguration)}`,
+      );
+      updateInput.armsConfiguration = await this.normalizeArmsLicenseKey();
+    }
 
     if (
       this.agentRuntimeConfig.sessionConcurrencyLimitPerInstance !== undefined
@@ -1220,7 +1257,8 @@ logConfig:
     }
     let isCreateWorkspace = true;
     if (id) {
-      await this.agentRuntimeClient.getWorkspace(id);
+      const getWorkspaceRequest = new GetWorkspaceRequest({});
+      await this.agentRuntimeClient.getWorkspace(id, getWorkspaceRequest);
       isCreateWorkspace = false;
       workspaceId = id;
     } else {
@@ -1305,10 +1343,13 @@ logConfig:
       logger.info(`found ${endpoints.length} endpoint(s), deleting...`);
       for (const endpoint of endpoints) {
         try {
+          const deleteAgentRuntimeEndpoint =
+            new DeleteAgentRuntimeEndpointRequest({});
           const deleteEndpointResp =
             await this.agentRuntimeClient.deleteAgentRuntimeEndpoint(
               runtimeId,
               endpoint.agentRuntimeEndpointId || "",
+              deleteAgentRuntimeEndpoint,
             );
           if (
             deleteEndpointResp.statusCode != 200 &&
@@ -1331,7 +1372,11 @@ logConfig:
       }
     }
 
-    const resp = await this.agentRuntimeClient.deleteAgentRuntime(runtimeId);
+    const deleteAgentRunRequest = new DeleteAgentRuntimeRequest({});
+    const resp = await this.agentRuntimeClient.deleteAgentRuntime(
+      runtimeId,
+      deleteAgentRunRequest,
+    );
     if (
       resp.statusCode != 200 &&
       resp.statusCode != 202 &&
