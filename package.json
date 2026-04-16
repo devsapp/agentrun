@@ -61,5 +61,10 @@
     "rimraf": "^5.0.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
+  },
+  "resolutions": {
+    "@alicloud/sls20191023": {
+      "registry": "https://packages.aliyun.com/670e108663cd360abfe4be65/npm/npm-registry/"
+    }
   }
 }
