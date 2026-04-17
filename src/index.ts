@@ -7,6 +7,7 @@ import Instance from "./subCommands/instance";
 import Concurrency from "./subCommands/concurrency";
 import Version from "./subCommands/version";
 import Endpoint from "./subCommands/endpoint";
+import Sync from "./subCommands/sync";
 
 const FC3_COMPONENT_NAME = "fc3";
 
@@ -499,6 +500,60 @@ export default class ComponentAgentRun {
           },
         },
       },
+      sync: {
+        help: {
+          description: `Sync agent runtime configuration and code from cloud to local.
+          
+          This command downloads the complete agent runtime configuration and code
+          from the cloud and saves them as local YAML and code files.
+          
+          Examples with CLI:
+            # Sync agent configuration and code to default directory
+            $ s cli agentrun sync --region cn-hangzhou --agent-name my-agent
+            
+            # Sync to custom target directory
+            $ s cli agentrun sync --region cn-hangzhou --agent-name my-agent --target-dir ./my-local-agent
+            
+            # Sync specific version or alias
+            $ s cli agentrun sync --region cn-hangzhou --agent-name my-agent --qualifier v1
+            
+            # Sync with debug mode
+            $ s cli agentrun sync --region cn-hangzhou --agent-name my-agent --debug
+            
+            # Skip EventBridge triggers
+            $ s cli agentrun sync --region cn-hangzhou --agent-name my-agent --disable-list-remote-eb-triggers true
+          `,
+          summary: "Sync agent runtime from cloud to local",
+          option: [
+            [
+              "--region <region>",
+              "Region where the agent runtime is deployed (required)",
+            ],
+            [
+              "--agent-name <name>",
+              "Name of the agent runtime to sync (required)",
+            ],
+            [
+              "--target-dir <dir>",
+              "Target directory for synced files (optional, default: ./sync-clone)",
+            ],
+            [
+              "--qualifier <qualifier>",
+              "Version or alias qualifier (optional, default: LATEST)",
+            ],
+            ["--workspace-id <id>", "Workspace ID (optional)"],
+            ["--workspace-name <name>", "Workspace name (optional)"],
+            [
+              "--disable-list-remote-eb-triggers <value>",
+              "Disable listing EventBridge triggers (optional)",
+            ],
+            [
+              "--disable-list-remote-alb-triggers <value>",
+              "Disable listing ALB triggers (optional)",
+            ],
+          ],
+        },
+      },
     };
   }
 
@@ -690,5 +745,12 @@ export default class ComponentAgentRun {
     GLogger.getLogger().debug(`endpoint ==> input: ${JSON.stringify(inputs)}`);
     const endpoint = new Endpoint(inputs);
     return await endpoint[endpoint.subCommand]();
+  }
+
+  public async sync(inputs: IInputs): Promise<any> {
+    GLogger.setLogger(this.logger);
+    GLogger.getLogger().debug(`sync ==> input: ${JSON.stringify(inputs)}`);
+    const sync = new Sync(inputs);
+    return await sync.run();
   }
 }
