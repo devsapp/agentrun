@@ -8,7 +8,6 @@ import {
   removeCustomDomain,
   infoCustomDomain,
 } from "./custom_domain";
-import * as $OpenApi from "@alicloud/openapi-client";
 import { parseArgv, getRootHome } from "@serverless-devs/utils";
 import * as _ from "lodash";
 import GLogger from "../common/logger";
@@ -33,7 +32,6 @@ import Client, {
   NASMountConfig,
   RoutingConfiguration,
   VersionWeight,
-  ListAgentRuntimesRequest,
   GetAgentRuntimeRequest,
   ListAgentRuntimeEndpointsRequest,
   ListWorkspacesRequest,
@@ -44,11 +42,15 @@ import Client, {
   DeleteAgentRuntimeEndpointRequest,
   DeleteAgentRuntimeRequest,
 } from "@alicloud/agentrun20250910";
-import { agentRunRegionEndpoints } from "../common/constant";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";
 import { promptForConfirmOrDetails } from "../utils/inquire";
 import { sleep } from "@alicloud/tea-typescript";
+import { initAgentRunClient } from "../utils/client";
+import {
+  resolveWorkspaceId,
+  getAgentRuntimeIdByWorkspace,
+} from "../utils/agentRuntimeQuery";
 
 // 新增导入
 import FC2 from "@alicloud/fc2";
@@ -392,32 +394,11 @@ export class AgentRun {
   }
 
   private async initClient(command: string) {
-    const {
-      AccessKeyID: accessKeyId,
-      AccessKeySecret: accessKeySecret,
-      SecurityToken: securityToken,
-    } = await this.inputs.getCredential();
-
-    const endpoint = agentRunRegionEndpoints.get(this.region);
-    if (!endpoint) {
-      throw new Error(`no agentrun endpoint found for ${this.region}`);
-    }
-    const protocol = "https";
-    const clientConfig = new $OpenApi.Config({
-      accessKeyId,
-      accessKeySecret,
-      securityToken,
-      protocol,
-      endpoint: endpoint,
-      readTimeout: 60000,
-      connectTimeout: 5000,
-      userAgent: `${
-        this.inputs.userAgent ||
-        `Component:agentrun;Nodejs:${process.version};OS:${process.platform}-${process.arch}`
-      }command:${command}`,
-    });
-
-    this.agentRuntimeClient = new Client(clientConfig);
+    this.agentRuntimeClient = await initAgentRunClient(
+      this.inputs,
+      this.region,
+      command,
+    );
   }
 
   /**
@@ -698,38 +679,33 @@ logConfig:
 
   private async findAgentRuntimeByName(): Promise<string> {
     const logger = GLogger.getLogger();
-    const listRequest = new ListAgentRuntimesRequest();
-    listRequest.agentRuntimeName = this.agentRuntimeConfig.agentRuntimeName;
-    listRequest.pageNumber = 1;
-    listRequest.pageSize = 100;
-    listRequest.searchMode = "exact";
+    const workspaceConfig = this.workspace;
+    let workspaceId: string | undefined = undefined;
+    let workspaceName: string | undefined = undefined;
+
+    if (workspaceConfig) {
+      workspaceId = workspaceConfig.id;
+      workspaceName = workspaceConfig.name;
+    }
 
     try {
-      const result =
-        await this.agentRuntimeClient.listAgentRuntimes(listRequest);
-      if (result.statusCode != 200) {
-        logger.error(
-          `list agent runtimes failed, statusCode: ${result.statusCode}, requestId: ${result.body?.requestId}`,
-        );
-        return "";
-      }
-      if (_.isEmpty(result.body?.data?.items)) {
-        logger.debug(
-          `no agent runtime found with name ${this.agentRuntimeConfig.agentRuntimeName}`,
-        );
-        return "";
-      }
-      const runtime = result.body.data.items.find(
-        (item) =>
-          item.agentRuntimeName == this.agentRuntimeConfig.agentRuntimeName,
+      const resolvedWorkspaceId = await resolveWorkspaceId(
+        this.agentRuntimeClient,
+        this.inputs,
+        workspaceId,
+        workspaceName,
       );
-      if (runtime == undefined) {
-        return "";
-      }
-      return runtime.agentRuntimeId || "";
-    } catch (e) {
-      logger.error(`list agent runtimes failed, message: ${e.message}`);
-      throw e;
+
+      const runtimeId = await getAgentRuntimeIdByWorkspace(
+        this.agentRuntimeClient,
+        this.agentRuntimeConfig.agentRuntimeName,
+        resolvedWorkspaceId,
+      );
+
+      return runtimeId;
+    } catch (error: any) {
+      logger.error(`Failed to find agent runtime: ${error.message}`);
+      throw error;
     }
   }
 
