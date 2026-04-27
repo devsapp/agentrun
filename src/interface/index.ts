@@ -1,4 +1,5 @@
 import { ArmsConfiguration } from "@alicloud/agentrun20250910";
+import { OSSMountConfig } from "@alicloud/fc20230330";
 import { IInputs as _IInputs } from "@serverless-devs/component-interface";
 
 export interface IInputs extends _IInputs {
@@ -57,6 +58,9 @@ export interface AgentConfig {
 
   // NAS 文件存储配置
   nasConfig?: NasConfig;
+
+  // OSS 挂载配置
+  ossMountConfig?: OSSMountConfig;
 
   // 环境变量
   environmentVariables?: { [key: string]: string };
@@ -264,6 +268,7 @@ export interface AgentRuntimeConfig {
   sessionIdleTimeoutSeconds?: number;
   networkConfiguration?: NetworkConfiguration;
   nasConfig?: NasConfigInternal;
+  ossMountConfig?: OSSMountConfig;
   environmentVariables?: { [key: string]: string };
   executionRoleArn?: string;
   credentialName?: string;
