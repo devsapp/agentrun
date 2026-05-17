@@ -16,6 +16,8 @@
         "cn-guangzhou",
         "cn-hongkong",
         "ap-southeast-1",
+        "ap-southeast-5",
+        "us-west-1",
         "eu-west-1"
       ],
       "default": "cn-hangzhou"
