@@ -2,6 +2,7 @@ import {
   IInputs,
   AgentRuntimeConfig,
   WorkspaceConfig,
+  RegistryConfigInput,
 } from "../interface/index";
 import {
   deployCustomDomain,
@@ -41,6 +42,10 @@ import Client, {
   GetWorkspaceRequest,
   DeleteAgentRuntimeEndpointRequest,
   DeleteAgentRuntimeRequest,
+  RegistryConfig,
+  RegistryAuthConfig,
+  RegistryCertConfig,
+  RegistryNetworkConfig,
 } from "@alicloud/agentrun20250910";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";
@@ -267,6 +272,8 @@ export class AgentRun {
         command: command || [],
         imageRegistryType: config.customContainerConfig.imageRegistryType,
         acrInstanceId: config.customContainerConfig.acrInstanceId,
+        registryConfig: config.customContainerConfig.registryConfig,
+        port: config.customContainerConfig.port,
       };
     } else {
       throw new Error("Either code or customContainerConfig must be provided");
@@ -794,6 +801,14 @@ logConfig:
       if (userContainerConfig.acrInstanceId) {
         containerConfig.acrInstanceId = userContainerConfig.acrInstanceId;
       }
+      if (userContainerConfig.registryConfig) {
+        containerConfig.registryConfig = this.buildRegistryConfig(
+          userContainerConfig.registryConfig,
+        );
+      }
+      if (userContainerConfig.port) {
+        containerConfig.port = userContainerConfig.port;
+      }
       createInput.containerConfiguration = containerConfig;
     }
 
@@ -984,6 +999,14 @@ logConfig:
       }
       if (userContainerConfig.acrInstanceId) {
         containerConfig.acrInstanceId = userContainerConfig.acrInstanceId;
+      }
+      if (userContainerConfig.registryConfig) {
+        containerConfig.registryConfig = this.buildRegistryConfig(
+          userContainerConfig.registryConfig,
+        );
+      }
+      if (userContainerConfig.port) {
+        containerConfig.port = userContainerConfig.port;
       }
       updateInput.containerConfiguration = containerConfig;
     }
@@ -1632,5 +1655,29 @@ logConfig:
    */
   public async initializeClient(command: string) {
     await this.initClient(command);
+  }
+
+  private buildRegistryConfig(input: RegistryConfigInput): RegistryConfig {
+    const registryConfig = new RegistryConfig();
+    if (input.authConfig) {
+      const authConfig = new RegistryAuthConfig();
+      authConfig.userName = input.authConfig.userName;
+      authConfig.password = input.authConfig.password;
+      registryConfig.authConfig = authConfig;
+    }
+    if (input.certConfig) {
+      const certConfig = new RegistryCertConfig();
+      certConfig.insecure = input.certConfig.insecure;
+      certConfig.rootCaCertBase64 = input.certConfig.rootCaCertBase64;
+      registryConfig.certConfig = certConfig;
+    }
+    if (input.networkConfig) {
+      const netConfig = new RegistryNetworkConfig();
+      netConfig.vpcId = input.networkConfig.vpcId;
+      netConfig.vSwitchId = input.networkConfig.vSwitchId;
+      netConfig.securityGroupId = input.networkConfig.securityGroupId;
+      registryConfig.networkConfig = netConfig;
+    }
+    return registryConfig;
   }
 }
