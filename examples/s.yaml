@@ -4,8 +4,8 @@ access: 'quanxi'
 
 resources:
   agentRuntime_example:
-    # component: agentrun@dev
-    component: ${path('../')}
+    component: agentrun@dev
+    # component: ${path('../')}
     props:
       region: cn-hangzhou
       agent:

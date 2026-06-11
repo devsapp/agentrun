@@ -123,6 +123,30 @@ export interface CustomContainerConfig {
   command?: string[];
   imageRegistryType?: "ACR" | "ACREE" | "CUSTOM"; // 镜像源类型
   acrInstanceId?: string; // ACR 实例 ID
+  registryConfig?: RegistryConfigInput; // 自定义镜像仓库配置（imageRegistryType 为 CUSTOM 时使用）
+  port?: number; // 容器监听端口
+}
+
+export interface RegistryConfigInput {
+  authConfig?: RegistryAuthConfigInput;
+  certConfig?: RegistryCertConfigInput;
+  networkConfig?: RegistryNetworkConfigInput;
+}
+
+export interface RegistryAuthConfigInput {
+  userName?: string;
+  password?: string;
+}
+
+export interface RegistryCertConfigInput {
+  insecure?: boolean;
+  rootCaCertBase64?: string;
+}
+
+export interface RegistryNetworkConfigInput {
+  vpcId?: string;
+  vSwitchId?: string;
+  securityGroupId?: string;
 }
 
 // VPC 配置
@@ -293,6 +317,8 @@ export interface ContainerConfiguration {
   command?: string[];
   imageRegistryType?: "ACR" | "ACREE" | "CUSTOM";
   acrInstanceId?: string;
+  registryConfig?: RegistryConfigInput;
+  port?: number;
 }
 
 export interface NetworkConfiguration {

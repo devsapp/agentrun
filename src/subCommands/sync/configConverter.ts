@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { AgentRuntimeInfo, FunctionConfig } from "./types";
+import { RegistryConfigInput } from "../../interface";
 import GLogger from "../../common/logger";
 
 /**
@@ -168,6 +169,34 @@ export function convertAgentRuntimeToFunctionConfig(
     if (agentRuntime.containerConfiguration.acrInstanceId) {
       agentConfig.customContainerConfig.acrInstanceId =
         agentRuntime.containerConfiguration.acrInstanceId;
+    }
+    if (agentRuntime.containerConfiguration.port) {
+      agentConfig.customContainerConfig.port =
+        agentRuntime.containerConfiguration.port;
+    }
+    if (agentRuntime.containerConfiguration.registryConfig) {
+      const rc = agentRuntime.containerConfiguration.registryConfig;
+      const registryConfig: RegistryConfigInput = {};
+      if (rc.authConfig) {
+        registryConfig.authConfig = {
+          userName: rc.authConfig.userName,
+          password: rc.authConfig.password,
+        };
+      }
+      if (rc.certConfig) {
+        registryConfig.certConfig = {
+          insecure: rc.certConfig.insecure,
+          rootCaCertBase64: rc.certConfig.rootCaCertBase64,
+        };
+      }
+      if (rc.networkConfig) {
+        registryConfig.networkConfig = {
+          vpcId: rc.networkConfig.vpcId,
+          vSwitchId: rc.networkConfig.vSwitchId,
+          securityGroupId: rc.networkConfig.securityGroupId,
+        };
+      }
+      agentConfig.customContainerConfig.registryConfig = registryConfig;
     }
   } else if (agentRuntime.codeConfiguration) {
     // 代码模式

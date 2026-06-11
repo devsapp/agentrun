@@ -98,6 +98,10 @@
               "type": "string",
               "description": "Container image URL"
             },
+            "port": {
+              "type": "number",
+              "description": "Container listening port"
+            },
             "command": {
               "type": "array",
               "description": "Command to run in container",
@@ -114,6 +118,58 @@
             "acrInstanceId": {
               "type": "string",
               "description": "ACR instance ID (required when imageRegistryType is ACR or ACREE)"
+            },
+            "registryConfig": {
+              "type": "object",
+              "description": "Custom registry configuration (used when imageRegistryType is CUSTOM)",
+              "properties": {
+                "authConfig": {
+                  "type": "object",
+                  "description": "Registry authentication configuration",
+                  "properties": {
+                    "userName": {
+                      "type": "string",
+                      "description": "Registry login username"
+                    },
+                    "password": {
+                      "type": "string",
+                      "description": "Registry login password"
+                    }
+                  }
+                },
+                "certConfig": {
+                  "type": "object",
+                  "description": "Registry certificate configuration",
+                  "properties": {
+                    "insecure": {
+                      "type": "boolean",
+                      "description": "Skip TLS certificate verification"
+                    },
+                    "rootCaCertBase64": {
+                      "type": "string",
+                      "description": "Root CA certificate in Base64 encoding for self-signed certificates"
+                    }
+                  }
+                },
+                "networkConfig": {
+                  "type": "object",
+                  "description": "Registry network configuration",
+                  "properties": {
+                    "vpcId": {
+                      "type": "string",
+                      "description": "VPC ID for the registry"
+                    },
+                    "vSwitchId": {
+                      "type": "string",
+                      "description": "VSwitch ID for the registry"
+                    },
+                    "securityGroupId": {
+                      "type": "string",
+                      "description": "Security group ID for the registry"
+                    }
+                  }
+                }
+              }
             }
           },
           "required": ["image"]
