@@ -9,6 +9,7 @@ export const agentRunRegionEndpoints: Map<string, string> = new Map([
   ["cn-zhangjiakou", "agentrun.cn-zhangjiakou.aliyuncs.com"],
   ["cn-shenzhen", "agentrun.cn-shenzhen.aliyuncs.com"],
   ["cn-guangzhou", "agentrun.cn-guangzhou.aliyuncs.com"],
+  ["cn-chengdu", "agentrun.cn-chengdu.aliyuncs.com"],
   ["cn-hongkong", "agentrun.cn-hongkong.aliyuncs.com"],
   ["ap-southeast-1", "agentrun.ap-southeast-1.aliyuncs.com"],
   ["ap-southeast-5", "agentrun.ap-southeast-5.aliyuncs.com"],
