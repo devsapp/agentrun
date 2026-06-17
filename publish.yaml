@@ -47,6 +47,7 @@ Parameters:
         - ap-southeast-5
         - us-west-1
         - eu-west-1
+        - eu-central-1
     agent:
       type: object
       description: AgentRun 运行时配置
