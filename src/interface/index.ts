@@ -51,6 +51,8 @@ export interface AgentConfig {
 
   // 会话配置
   sessionIdleTimeoutSeconds?: number; // 会话空闲超时（秒），默认 3600
+  enableSessionIsolation?: boolean; // 是否启用会话隔离
+  disableSessionAffinity?: boolean; // 是否关闭会话亲和（默认 false，即会话亲和默认开启）
 
   // 网络配置
   vpcConfig?: VpcConfig; // VPC 配置
@@ -290,6 +292,8 @@ export interface AgentRuntimeConfig {
   port?: number;
   sessionConcurrencyLimitPerInstance?: number;
   sessionIdleTimeoutSeconds?: number;
+  enableSessionIsolation?: boolean;
+  disableSessionAffinity?: boolean;
   networkConfiguration?: NetworkConfiguration;
   nasConfig?: NasConfigInternal;
   ossMountConfig?: OSSMountConfig;
