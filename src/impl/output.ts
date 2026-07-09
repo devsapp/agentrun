@@ -1,3 +1,5 @@
+import { OSSMountConfig } from "@alicloud/agentrun20250910";
+
 export class AgentRuntimeOutput {
   agent: {
     id: string;
@@ -18,6 +20,7 @@ export class AgentRuntimeOutput {
       lastUpdatedAt?: string;
     };
     region: string;
+    ossMountConfig?: OSSMountConfig;
     endpoints?: Array<{
       id: string;
       arn: string;

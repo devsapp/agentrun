@@ -43,6 +43,9 @@ import Client, {
   RegistryAuthConfig,
   RegistryCertConfig,
   RegistryNetworkConfig,
+  OSSMountConfig as AgentRunOSSMountConfig,
+  OSSMountPoint as AgentRunOSSMountPoint,
+  ProtocolSettings,
 } from "@alicloud/agentrun20250910";
 import { verify, verifyDelete } from "../utils/verify";
 import { AgentRuntimeOutput } from "./output";
@@ -325,6 +328,11 @@ export class AgentRun {
       };
     }
 
+    // 处理 OSS 挂载配置
+    if (config.ossMountConfig) {
+      normalized.ossMountConfig = config.ossMountConfig;
+    }
+
     // 处理日志配置
     if (config.logConfig) {
       if (config.logConfig === "auto") {
@@ -341,6 +349,7 @@ export class AgentRun {
     if (config.protocolConfiguration) {
       normalized.protocolConfiguration = {
         type: config.protocolConfiguration.type || "HTTP",
+        protocolSettings: config.protocolConfiguration.protocolSettings || [],
       };
     }
 
@@ -856,6 +865,24 @@ logConfig:
       createInput.nasConfig = nasConfig;
     }
 
+    // 处理 OSS 挂载配置
+    if (this.agentRuntimeConfig.ossMountConfig) {
+      const ossMountConfig = new AgentRunOSSMountConfig();
+      if (this.agentRuntimeConfig.ossMountConfig.mountPoints) {
+        ossMountConfig.mountPoints =
+          this.agentRuntimeConfig.ossMountConfig.mountPoints.map((mp: any) => {
+            const mountPoint = new AgentRunOSSMountPoint();
+            mountPoint.bucketName = mp.bucketName;
+            mountPoint.bucketPath = mp.bucketPath;
+            mountPoint.endpoint = mp.endpoint;
+            mountPoint.mountDir = mp.mountDir;
+            mountPoint.readOnly = mp.readOnly;
+            return mountPoint;
+          });
+      }
+      createInput.ossMountConfig = ossMountConfig;
+    }
+
     createInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
 
@@ -878,6 +905,18 @@ logConfig:
     if (this.agentRuntimeConfig.protocolConfiguration) {
       const protocolConfig = new ProtocolConfiguration();
       protocolConfig.type = this.agentRuntimeConfig.protocolConfiguration.type;
+      if (this.agentRuntimeConfig.protocolConfiguration.protocolSettings) {
+        protocolConfig.protocolSettings =
+          this.agentRuntimeConfig.protocolConfiguration.protocolSettings.map(
+            (ps) => {
+              const protocolSettings = new ProtocolSettings();
+              protocolSettings.type = ps.type;
+              protocolSettings.name = ps.name;
+              protocolSettings.config = ps.config;
+              return protocolSettings;
+            },
+          );
+      }
       createInput.protocolConfiguration = protocolConfig;
     }
 
@@ -1065,6 +1104,24 @@ logConfig:
       updateInput.nasConfig = nasConfig;
     }
 
+    // 处理 OSS 挂载配置
+    if (this.agentRuntimeConfig.ossMountConfig) {
+      const ossMountConfig = new AgentRunOSSMountConfig();
+      if (this.agentRuntimeConfig.ossMountConfig.mountPoints) {
+        ossMountConfig.mountPoints =
+          this.agentRuntimeConfig.ossMountConfig.mountPoints.map((mp: any) => {
+            const mountPoint = new AgentRunOSSMountPoint();
+            mountPoint.bucketName = mp.bucketName;
+            mountPoint.bucketPath = mp.bucketPath;
+            mountPoint.endpoint = mp.endpoint;
+            mountPoint.mountDir = mp.mountDir;
+            mountPoint.readOnly = mp.readOnly;
+            return mountPoint;
+          });
+      }
+      updateInput.ossMountConfig = ossMountConfig;
+    }
+
     updateInput.environmentVariables =
       this.agentRuntimeConfig.environmentVariables;
 
@@ -1087,6 +1144,18 @@ logConfig:
     if (this.agentRuntimeConfig.protocolConfiguration) {
       const protocolConfig = new ProtocolConfiguration();
       protocolConfig.type = this.agentRuntimeConfig.protocolConfiguration.type;
+      if (this.agentRuntimeConfig.protocolConfiguration.protocolSettings) {
+        protocolConfig.protocolSettings =
+          this.agentRuntimeConfig.protocolConfiguration.protocolSettings.map(
+            (ps) => {
+              const protocolSettings = new ProtocolSettings();
+              protocolSettings.type = ps.type;
+              protocolSettings.name = ps.name;
+              protocolSettings.config = ps.config;
+              return protocolSettings;
+            },
+          );
+      }
       updateInput.protocolConfiguration = protocolConfig;
     }
 
@@ -1498,6 +1567,7 @@ logConfig:
         createdAt: runtime.createdAt,
         lastUpdatedAt: runtime.lastUpdatedAt,
       },
+      ossMountConfig: runtime.ossMountConfig,
       region: this.region,
       endpoints: endpointsOutput,
       customDomain: customDomainOutput,

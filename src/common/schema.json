@@ -304,6 +304,46 @@
           "required": ["mountPoints"],
           "additionalProperties": false
         },
+        "ossMountConfig": {
+          "type": "object",
+          "description": "OSS mount configuration",
+          "properties": {
+            "mountPoints": {
+              "type": "array",
+              "description": "OSS mount point configurations",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "bucketName": {
+                    "type": "string",
+                    "description": "The OSS bucket to mount"
+                  },
+                  "bucketPath": {
+                    "type": "string",
+                    "description": "The directory path within the bucket to mount"
+                  },
+                  "endpoint": {
+                    "type": "string",
+                    "description": "The OSS endpoint, e.g. http://oss-cn-shanghai.aliyuncs.com"
+                  },
+                  "mountDir": {
+                    "type": "string",
+                    "description": "The local directory path where the bucket is mounted, e.g. /mnt/oss"
+                  },
+                  "readOnly": {
+                    "type": "boolean",
+                    "description": "Whether to mount the OSS bucket as read-only"
+                  }
+                },
+                "required": ["bucketName", "mountDir"],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["mountPoints"],
+          "additionalProperties": false
+        },
         "environmentVariables": {
           "type": "object",
           "description": "Environment variables",
