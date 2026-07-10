@@ -1,5 +1,8 @@
-import { ArmsConfiguration } from "@alicloud/agentrun20250910";
-import { OSSMountConfig } from "@alicloud/fc20230330";
+import {
+  ArmsConfiguration,
+  ProtocolSettings,
+  OSSMountConfig,
+} from "@alicloud/agentrun20250910";
 import { IInputs as _IInputs } from "@serverless-devs/component-interface";
 
 export interface IInputs extends _IInputs {
@@ -351,6 +354,7 @@ export interface LogConfiguration {
 
 export interface ProtocolConfiguration {
   type: "HTTP" | "HTTPS";
+  protocolSettings?: ProtocolSettings[];
 }
 
 export interface HealthCheckConfiguration {
