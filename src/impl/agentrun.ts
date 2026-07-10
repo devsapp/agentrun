@@ -39,9 +39,6 @@ import Client, {
   CreateWorkspaceRequest,
   CreateWorkspaceInput,
   ArmsConfiguration,
-  GetWorkspaceRequest,
-  DeleteAgentRuntimeEndpointRequest,
-  DeleteAgentRuntimeRequest,
   RegistryConfig,
   RegistryAuthConfig,
   RegistryCertConfig,
@@ -218,6 +215,8 @@ export class AgentRun {
       port: config.port,
       sessionConcurrencyLimitPerInstance: config.instanceConcurrency,
       sessionIdleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
+      enableSessionIsolation: config.enableSessionIsolation,
+      disableSessionAffinity: config.disableSessionAffinity,
       environmentVariables: config.environmentVariables,
       executionRoleArn: config.role, // 保存原始值，稍后在需要时转换
       credentialName: config.credentialName,
@@ -752,6 +751,16 @@ logConfig:
         this.agentRuntimeConfig.sessionIdleTimeoutSeconds;
     }
 
+    if (this.agentRuntimeConfig.enableSessionIsolation !== undefined) {
+      createInput.enableSessionIsolation =
+        this.agentRuntimeConfig.enableSessionIsolation;
+    }
+
+    if (this.agentRuntimeConfig.disableSessionAffinity !== undefined) {
+      createInput.disableSessionAffinity =
+        this.agentRuntimeConfig.disableSessionAffinity;
+    }
+
     if (this.agentRuntimeConfig.credentialName) {
       createInput.credentialName = this.agentRuntimeConfig.credentialName;
     }
@@ -949,6 +958,16 @@ logConfig:
     if (this.agentRuntimeConfig.sessionIdleTimeoutSeconds !== undefined) {
       updateInput.sessionIdleTimeoutSeconds =
         this.agentRuntimeConfig.sessionIdleTimeoutSeconds;
+    }
+
+    if (this.agentRuntimeConfig.enableSessionIsolation !== undefined) {
+      updateInput.enableSessionIsolation =
+        this.agentRuntimeConfig.enableSessionIsolation;
+    }
+
+    if (this.agentRuntimeConfig.disableSessionAffinity !== undefined) {
+      updateInput.disableSessionAffinity =
+        this.agentRuntimeConfig.disableSessionAffinity;
     }
 
     if (this.agentRuntimeConfig.credentialName) {
@@ -1256,8 +1275,7 @@ logConfig:
     }
     let isCreateWorkspace = true;
     if (id) {
-      const getWorkspaceRequest = new GetWorkspaceRequest({});
-      await this.agentRuntimeClient.getWorkspace(id, getWorkspaceRequest);
+      await this.agentRuntimeClient.getWorkspace(id);
       isCreateWorkspace = false;
       workspaceId = id;
     } else {
@@ -1342,13 +1360,10 @@ logConfig:
       logger.info(`found ${endpoints.length} endpoint(s), deleting...`);
       for (const endpoint of endpoints) {
         try {
-          const deleteAgentRuntimeEndpoint =
-            new DeleteAgentRuntimeEndpointRequest({});
           const deleteEndpointResp =
             await this.agentRuntimeClient.deleteAgentRuntimeEndpoint(
               runtimeId,
               endpoint.agentRuntimeEndpointId || "",
-              deleteAgentRuntimeEndpoint,
             );
           if (
             deleteEndpointResp.statusCode != 200 &&
@@ -1371,11 +1386,7 @@ logConfig:
       }
     }
 
-    const deleteAgentRunRequest = new DeleteAgentRuntimeRequest({});
-    const resp = await this.agentRuntimeClient.deleteAgentRuntime(
-      runtimeId,
-      deleteAgentRunRequest,
-    );
+    const resp = await this.agentRuntimeClient.deleteAgentRuntime(runtimeId);
     if (
       resp.statusCode != 200 &&
       resp.statusCode != 202 &&

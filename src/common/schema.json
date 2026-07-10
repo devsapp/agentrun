@@ -216,6 +216,14 @@
           "minimum": 60,
           "maximum": 86400
         },
+        "enableSessionIsolation": {
+          "type": "boolean",
+          "description": "Enable session isolation for the agent runtime"
+        },
+        "disableSessionAffinity": {
+          "type": "boolean",
+          "description": "Disable session affinity (default: false, session affinity is enabled by default)"
+        },
         "vpcConfig": {
           "type": "object",
           "description": "VPC configuration",
