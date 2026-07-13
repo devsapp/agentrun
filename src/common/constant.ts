@@ -16,6 +16,7 @@ export const agentRunRegionEndpoints: Map<string, string> = new Map([
   ["us-west-1", "agentrun.us-west-1.aliyuncs.com"],
   ["eu-west-1", "agentrun.eu-west-1.aliyuncs.com"],
   ["eu-central-1", "agentrun.eu-central-1.aliyuncs.com"],
+  ["ap-northeast-1", "agentrun.ap-northeast-1.aliyuncs.com"],
 ]);
 
 export const FC3_DOMAIN_COMPONENT_NAME = "fc3-domain";
